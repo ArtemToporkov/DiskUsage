@@ -1,4 +1,5 @@
 import os, datetime
+import xml.etree.ElementTree as ET
 
 
 class File:
@@ -17,20 +18,29 @@ class File:
         return (f'-- {self.name} -- {self.location} -- {self.size} -- {self.change_date} -- {self.creation_date}')
 
 
-DIRECTORY = r'C:\Users\topor\OneDrive\Рабочий стол\check'
+#DIRECTORY = 'C:\\Users\\topor\\OneDrive\\Рабочий стол\\check'
+DIRECTORY = 'D:\\'
 CURRENT = File(DIRECTORY)
 
 
 def fill_disk_usage(path: str, current: File):
-    for file in (f for f in os.listdir(path) if not os.path.isdir(os.path.join(path, f))):
-        current.files.append(File(os.path.join(path, file)))
+    try:
+        for file in (f for f in os.listdir(path) if not os.path.isdir(os.path.join(path, f))):
+            current.files.append(File(os.path.join(path, file)))
+    except:
+        pass
 
-    for folder in (f for f in os.listdir(path) if os.path.isdir(os.path.join(path, f))):
-        current.folders.append(File(os.path.join(path, folder)))
+    try:
+        for folder in (f for f in os.listdir(path) if os.path.isdir(os.path.join(path, f))):
+            current.folders.append(File(os.path.join(path, folder)))
+    except:
+        pass
 
     for folder in current.folders:
         fill_disk_usage(os.path.join(path, folder.name), folder)
 
 
-fill_disk_usage(DIRECTORY, CURRENT)
-print(CURRENT)
+def build_tree():
+    fill_disk_usage(DIRECTORY, CURRENT)
+    return CURRENT
+
