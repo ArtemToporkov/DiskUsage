@@ -10,33 +10,39 @@ class MainWindow(QDialog):
         super(MainWindow, self).__init__()
         loadUi('diskUsage.ui', self)
         self.print_tree()
+        self.treeWidget.header().resizeSection(0, 300)
+        self.treeWidget.header().resizeSection(1, 50)
 
     def print_tree(self):
         tree = DiskUsage.build_tree()
-        self.treeWidget.setColumnCount(1)
         element = QTreeWidgetItem([tree.name])
         self.treeWidget.addTopLevelItem(element)
+        element.setExpanded(True)
 
         def display_tree(el, catalog: DiskUsage.File):
-            for file in catalog.files:
-                file_item = QTreeWidgetItem([file.name])
-                el.addChild(file_item)
-            for folder in catalog.folders:
-                folder_item = QTreeWidgetItem([folder.name])
-                el.addChild(folder_item)
-                display_tree(folder_item, folder)
+            content = catalog.files + catalog.folders
+            for item in content:
+                info = [
+                    item.name,
+                    str(item.size),
+                    item.creation_date.strftime('%H:%M:%S %d.%m.%y'),
+                    item.change_date.strftime('%H:%M:%S %d.%m.%y'),
+                    str(item.extension)
+                ]
+                tree_item = QTreeWidgetItem(info)
+                el.addChild(tree_item)
+                if item.extension == '':
+                    display_tree(tree_item, item)
 
         display_tree(element, tree)
 
 
-app = QApplication(sys.argv)
-main_window = MainWindow()
-widget = QtWidgets.QStackedWidget()
-widget.addWidget(main_window)
-widget.setFixedHeight(850)
-widget.setFixedWidth(1120)
-widget.show()
-try:
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    main_window = MainWindow()
+    widget = QtWidgets.QStackedWidget()
+    widget.addWidget(main_window)
+    widget.setFixedHeight(850)
+    widget.setFixedWidth(1120)
+    widget.show()
     sys.exit(app.exec_())
-except:
-    print('Exiting')

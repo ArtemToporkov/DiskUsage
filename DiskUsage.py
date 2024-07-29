@@ -18,8 +18,8 @@ class File:
         return (f'-- {self.name} -- {self.location} -- {self.size} -- {self.change_date} -- {self.creation_date}')
 
 
-#DIRECTORY = 'C:\\Users\\topor\\OneDrive\\Рабочий стол\\check'
-DIRECTORY = 'D:\\'
+DIRECTORY = 'C:\\Users\\topor\\OneDrive\\Рабочий стол\\check'
+#DIRECTORY = 'D:\\'
 CURRENT = File(DIRECTORY)
 
 
