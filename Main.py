@@ -43,6 +43,6 @@ if __name__ == '__main__':
     widget = QtWidgets.QStackedWidget()
     widget.addWidget(main_window)
     widget.setFixedHeight(850)
-    widget.setFixedWidth(1120)
+    widget.setFixedWidth(1400)
     widget.show()
     sys.exit(app.exec_())
