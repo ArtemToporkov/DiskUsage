@@ -1,13 +1,15 @@
 import sys
 from PyQt5.uic import loadUi
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QDialog, QApplication, QTreeWidgetItem
+from PyQt5.QtWidgets import QDialog, QApplication, QTreeWidgetItem, QPushButton
 import DiskUsage
 from PyQt5.QtWidgets import QApplication, QMainWindow
 import sys
 from PyQt5.QtChart import QChart, QChartView, QPieSeries, QPieSlice
-from PyQt5.QtGui import QPainter, QPen, QColor
+from PyQt5.QtGui import QPainter, QPen, QColor, QFont
 from PyQt5.QtCore import Qt
+import win32api
+from functools import partial
 
 
 class QFileItem(QTreeWidgetItem):
@@ -27,15 +29,31 @@ class MainWindow(QDialog):
     def __init__(self):
         super(MainWindow, self).__init__()
         loadUi('diskUsage.ui', self)
-        self.print_tree()
+        self.processed_disk = ''
+        self.startButton.clicked.connect(partial(self.print_tree, self.processed_disk))
         self.treeWidget.header().resizeSection(0, 300)
         self.treeWidget.header().resizeSection(1, 50)
         self.treeWidget.itemClicked.connect(self.update_chart)
         self.chart.setRenderHint(QPainter.Antialiasing)
-        series = QPieSeries()
+        for disk in self.get_disks():
+            disk_button = QPushButton(disk)
+            disk_button.setFixedHeight(80)
+            disk_button.setFont(QFont('Montserrat bold', 20))
+            disk_button.clicked.connect(partial(self.set_directory, disk_button.text()))
+            self.horizontalLayout.addWidget(disk_button)
 
-    def print_tree(self):
-        tree = DiskUsage.build_tree()
+    def set_directory(self, text):
+        self.processed_disk = text + ':\\'
+    def get_disks(self):
+        drives = win32api.GetLogicalDriveStrings()
+        drives = drives.split('\000')[:-1]
+        drives = [drive.split(':')[0] for drive in drives]
+        return drives
+
+    def print_tree(self, disk):
+        if self.lineEdit.text():
+            self.processed_disk = self.lineEdit.text()
+        tree = DiskUsage.build_tree(self.processed_disk)
         element = QFileItem(tree)
         self.treeWidget.addTopLevelItem(element)
         element.setExpanded(True)
@@ -49,6 +67,7 @@ class MainWindow(QDialog):
                     display_tree(tree_item, item)
 
         display_tree(element, tree)
+        self.stackedWidget.setCurrentIndex(1)
 
     def update_chart(self):
         file = self.treeWidget.currentItem().file

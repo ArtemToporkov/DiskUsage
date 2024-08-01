@@ -1,3 +1,5 @@
-a = [1, 2, 3]
-b = [4, 5, 6]
-print(a + b)
+import win32api
+
+drives = win32api.GetLogicalDriveStrings()
+drives = drives.split('\000')[:-1]
+print(drives)

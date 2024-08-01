@@ -17,9 +17,8 @@ class File:
         self.parents = []
 
 
-# DIRECTORY = 'C:\\Users\\topor\OneDrive\\Рабочий стол\\check'
-DIRECTORY = 'D:\\'
-CURRENT = File(DIRECTORY)
+
+CURRENT = None
 
 
 def fill_disk_usage(path: str, current: File):
@@ -41,9 +40,10 @@ def fill_disk_usage(path: str, current: File):
         fill_disk_usage(os.path.join(path, folder.name), folder)
 
 
-def build_tree():
+def build_tree(directory):
     start_time = time.time()
-    fill_disk_usage(DIRECTORY, CURRENT)
+    CURRENT = File(directory)
+    fill_disk_usage(directory, CURRENT)
     print("--- %s seconds ---" % (time.time() - start_time))
     return CURRENT
 
