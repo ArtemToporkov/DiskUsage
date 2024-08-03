@@ -10,6 +10,7 @@ from PyQt5.QtGui import QPainter, QPen, QColor, QFont
 from PyQt5.QtCore import Qt
 import win32api
 from functools import partial
+import time
 
 
 class QFileItem(QTreeWidgetItem):
@@ -17,8 +18,8 @@ class QFileItem(QTreeWidgetItem):
         info = [
             file.name,
             str(file.size),
-            file.creation_date.strftime('%H:%M:%S %d.%m.%y'),
-            file.change_date.strftime('%H:%M:%S %d.%m.%y'),
+            file.creation_date.strftime('%H:%M:%S %d.%m.%y') if file.extension != 'protected system file' else '??.??.????',
+            file.change_date.strftime('%H:%M:%S %d.%m.%y') if file.extension != 'protected system file' else '??.??.????',
             str(file.extension)
         ]
         super().__init__(info)
@@ -44,6 +45,7 @@ class MainWindow(QDialog):
 
     def set_directory(self, text):
         self.processed_disk = text + ':\\'
+
     def get_disks(self):
         drives = win32api.GetLogicalDriveStrings()
         drives = drives.split('\000')[:-1]
@@ -65,8 +67,9 @@ class MainWindow(QDialog):
                 el.addChild(tree_item)
                 if item.extension == '':
                     display_tree(tree_item, item)
-
+        start_time = time.time()
         display_tree(element, tree)
+        print("--- %s seconds ---" % (time.time() - start_time))
         self.stackedWidget.setCurrentIndex(1)
 
     def update_chart(self):
