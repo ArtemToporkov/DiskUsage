@@ -56,7 +56,8 @@ class MainWindow(QDialog):
         self.stackedWidget.setCurrentIndex(1)
         if self.lineEdit.text():
             self.processed_disk = self.lineEdit.text()
-        self.task = DiskUsage.CalculatingMemoryUsage(self.processed_disk)
+        required_files_count = DiskUsage.get_files_count(self.processed_disk)
+        self.task = DiskUsage.CalculatingMemoryUsage(self.processed_disk, required_files_count)
         self.task.updated.connect(self.on_update)
         self.task.finished.connect(self.start_building_widget_on_finish_calculating)
         self.task.start()

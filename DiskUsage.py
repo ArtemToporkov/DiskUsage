@@ -27,8 +27,6 @@ class File:
             self.folders = []
             self.parents = []
 
-CURRENT = None
-COUNT = 0
 
 
 class CalculatingMemoryUsage(QtCore.QThread):
@@ -36,39 +34,49 @@ class CalculatingMemoryUsage(QtCore.QThread):
     finished = QtCore.pyqtSignal(File)
     running = False
 
-    def __init__(self, disk):
+    def __init__(self, disk, required_count):
         super(CalculatingMemoryUsage, self).__init__()
         self.disk = disk
         self.percent = 0
         self.running = True
+        self.tree = None
+        self.count = 0
+        self.required_count = required_count
 
     def run(self):
-        tree = build_tree(self.disk)
+        tree = self.build_tree()
         self.finished.emit(tree)
+
+    def fill_disk_usage(self, path: str, current: File):
+        try:
+            for file in os.scandir(path):
+                if os.path.isdir(file.path):
+                    folder_instance = File(file.path)
+                    current.folders.append(folder_instance)
+                    folder_instance.parents.append(current)
+                else:
+                    file_instance = File(file.path)
+                    current.files.append(file_instance)
+                    current.size += file_instance.size
+                    for parent in current.parents:
+                        parent.size += file_instance.size
+        except PermissionError:
+            pass
+        self.count += len(current.folders) + len(current.files)
+        self.updated.emit(int(self.count / self.required_count) * 100)
+        for folder in current.folders:
+            self.fill_disk_usage(os.path.join(path, folder.name), folder)
+
+    def build_tree(self):
+        start_time = time.time()
+        self.tree = File(self.disk)
+        self.fill_disk_usage(self.disk, self.tree)
+        print("--- %s seconds ---" % (time.time() - start_time))
+        print(self.count, self.required_count)
+        return self.tree
 
     def stop(self):
         self.running = False
-
-
-def fill_disk_usage(path: str, current: File):
-    global COUNT
-    try:
-        for file in os.scandir(path):
-            if os.path.isdir(file.path):
-                folder_instance = File(file.path)
-                current.folders.append(folder_instance)
-                folder_instance.parents.append(current)
-            else:
-                file_instance = File(file.path)
-                current.files.append(file_instance)
-                current.size += file_instance.size
-                for parent in current.parents:
-                    parent.size += file_instance.size
-    except PermissionError:
-        pass
-    COUNT += len(current.folders) + len(current.files)
-    for folder in current.folders:
-        fill_disk_usage(os.path.join(path, folder.name), folder)
 
 
 def get_files_count(directory):
@@ -76,13 +84,4 @@ def get_files_count(directory):
     for root, dirs, files in os.walk(directory):
         c += len(dirs) + len(files)
     return c
-
-
-def build_tree(directory):
-    start_time = time.time()
-    CURRENT = File(directory)
-    fill_disk_usage(directory, CURRENT)
-    print("--- %s seconds ---" % (time.time() - start_time))
-    print(COUNT, get_files_count(directory))
-    return CURRENT
 
