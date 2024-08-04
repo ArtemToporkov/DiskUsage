@@ -2,7 +2,8 @@ import os, datetime
 import xml.etree.ElementTree as ET
 from PyQt5.QtChart import QChartView
 import time
-import pathlib
+import PyQt5
+from PyQt5 import QtCore
 
 
 class File:
@@ -29,16 +30,36 @@ class File:
 CURRENT = None
 COUNT = 0
 
+
+class CalculatingMemoryUsage(QtCore.QThread):
+    updated = QtCore.pyqtSignal(int)
+    finished = QtCore.pyqtSignal(File)
+    running = False
+
+    def __init__(self, disk):
+        super(CalculatingMemoryUsage, self).__init__()
+        self.disk = disk
+        self.percent = 0
+        self.running = True
+
+    def run(self):
+        tree = build_tree(self.disk)
+        self.finished.emit(tree)
+
+    def stop(self):
+        self.running = False
+
+
 def fill_disk_usage(path: str, current: File):
     global COUNT
     try:
-        for file in os.listdir(path):
-            if os.path.isdir(os.path.join(path, file)):
-                folder_instance = File(os.path.join(path, file))
+        for file in os.scandir(path):
+            if os.path.isdir(file.path):
+                folder_instance = File(file.path)
                 current.folders.append(folder_instance)
                 folder_instance.parents.append(current)
             else:
-                file_instance = File(os.path.join(path, file))
+                file_instance = File(file.path)
                 current.files.append(file_instance)
                 current.size += file_instance.size
                 for parent in current.parents:

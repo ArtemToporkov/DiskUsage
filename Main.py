@@ -1,13 +1,13 @@
 import sys
 from PyQt5.uic import loadUi
-from PyQt5 import QtWidgets
+from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtWidgets import QDialog, QApplication, QTreeWidgetItem, QPushButton
 import DiskUsage
 from PyQt5.QtWidgets import QApplication, QMainWindow
 import sys
 from PyQt5.QtChart import QChart, QChartView, QPieSeries, QPieSlice
 from PyQt5.QtGui import QPainter, QPen, QColor, QFont
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, pyqtSignal
 import win32api
 from functools import partial
 import time
@@ -18,8 +18,8 @@ class QFileItem(QTreeWidgetItem):
         info = [
             file.name,
             str(file.size),
-            file.creation_date.strftime('%H:%M:%S %d.%m.%y') if file.extension != 'protected system file' else '??.??.????',
-            file.change_date.strftime('%H:%M:%S %d.%m.%y') if file.extension != 'protected system file' else '??.??.????',
+            file.creation_date.strftime('%H:%M:%S %d.%m.%y') if file.extension != 'protected system file' else '??:??:?? ??.??.????',
+            file.change_date.strftime('%H:%M:%S %d.%m.%y') if file.extension != 'protected system file' else '??:??:?? ??.??.????',
             str(file.extension)
         ]
         super().__init__(info)
@@ -31,7 +31,7 @@ class MainWindow(QDialog):
         super(MainWindow, self).__init__()
         loadUi('diskUsage.ui', self)
         self.processed_disk = ''
-        self.startButton.clicked.connect(partial(self.print_tree, self.processed_disk))
+        self.startButton.clicked.connect(self.start_building_tree)
         self.treeWidget.header().resizeSection(0, 300)
         self.treeWidget.header().resizeSection(1, 50)
         self.treeWidget.itemClicked.connect(self.update_chart)
@@ -52,10 +52,19 @@ class MainWindow(QDialog):
         drives = [drive.split(':')[0] for drive in drives]
         return drives
 
-    def print_tree(self, disk):
+    def start_building_tree(self):
+        self.stackedWidget.setCurrentIndex(1)
         if self.lineEdit.text():
             self.processed_disk = self.lineEdit.text()
-        tree = DiskUsage.build_tree(self.processed_disk)
+        self.task = DiskUsage.CalculatingMemoryUsage(self.processed_disk)
+        self.task.updated.connect(self.on_update)
+        self.task.finished.connect(self.start_building_widget_on_finish_calculating)
+        self.task.start()
+
+    def on_update(self, data):
+        self.progressBar.setValue(int(data))
+
+    def start_building_widget_on_finish_calculating(self, tree):
         element = QFileItem(tree)
         self.treeWidget.addTopLevelItem(element)
         element.setExpanded(True)
@@ -67,10 +76,11 @@ class MainWindow(QDialog):
                 el.addChild(tree_item)
                 if item.extension == '':
                     display_tree(tree_item, item)
+
         start_time = time.time()
         display_tree(element, tree)
         print("--- %s seconds ---" % (time.time() - start_time))
-        self.stackedWidget.setCurrentIndex(1)
+        self.stackedWidget.setCurrentIndex(2)
 
     def update_chart(self):
         file = self.treeWidget.currentItem().file
