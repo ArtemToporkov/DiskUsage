@@ -30,7 +30,7 @@ class File:
 
 
 class CalculatingMemoryUsage(QtCore.QThread):
-    updated = QtCore.pyqtSignal(int)
+    updated = QtCore.pyqtSignal(float)
     finished = QtCore.pyqtSignal(File)
     running = False
 
@@ -63,7 +63,7 @@ class CalculatingMemoryUsage(QtCore.QThread):
         except PermissionError:
             pass
         self.count += len(current.folders) + len(current.files)
-        self.updated.emit(int(self.count / self.required_count) * 100)
+        self.updated.emit(self.count / self.required_count * 100)
         for folder in current.folders:
             self.fill_disk_usage(os.path.join(path, folder.name), folder)
 

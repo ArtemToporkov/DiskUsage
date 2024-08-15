@@ -1,7 +1,7 @@
 import sys
 from PyQt5.uic import loadUi
 from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtWidgets import QDialog, QApplication, QTreeWidgetItem, QPushButton
+from PyQt5.QtWidgets import QDialog, QApplication, QTreeWidgetItem, QPushButton, QSizePolicy, QStackedWidget
 import DiskUsage
 from PyQt5.QtWidgets import QApplication, QMainWindow
 import sys
@@ -26,7 +26,7 @@ class QFileItem(QTreeWidgetItem):
         self.file = file
 
 
-class MainWindow(QDialog):
+class MainWindow(QStackedWidget):
     def __init__(self):
         super(MainWindow, self).__init__()
         loadUi('diskUsage.ui', self)
@@ -36,14 +36,19 @@ class MainWindow(QDialog):
         self.treeWidget.header().resizeSection(1, 50)
         self.treeWidget.itemClicked.connect(self.update_chart)
         self.chart.setRenderHint(QPainter.Antialiasing)
+        self.lineEdit.textChanged.connect(self.on_text_changed)
         for disk in self.get_disks():
             disk_button = QPushButton(disk)
             disk_button.setFixedHeight(80)
+            disk_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
             disk_button.setFont(QFont('Montserrat bold', 20))
             disk_button.clicked.connect(partial(self.set_directory, disk_button.text()))
             self.horizontalLayout.addWidget(disk_button)
 
     def set_directory(self, text):
+        print(self.size())
+        print(self.startButton.size())
+        print(self.currentWidget())
         self.processed_disk = text + ':\\'
 
     def get_disks(self):
@@ -53,7 +58,7 @@ class MainWindow(QDialog):
         return drives
 
     def start_building_tree(self):
-        self.stackedWidget.setCurrentIndex(1)
+        self.setCurrentIndex(1)
         if self.lineEdit.text():
             self.processed_disk = self.lineEdit.text()
         required_files_count = DiskUsage.get_files_count(self.processed_disk)
@@ -64,6 +69,10 @@ class MainWindow(QDialog):
 
     def on_update(self, data):
         self.progressBar.setValue(int(data))
+
+    def on_text_changed(self):
+        for button in (self.horizontalLayout.itemAt(i).widget() for i in range(self.horizontalLayout.count())):
+            button.setEnabled(not self.lineEdit.text())
 
     def start_building_widget_on_finish_calculating(self, tree):
         element = QFileItem(tree)
@@ -81,7 +90,7 @@ class MainWindow(QDialog):
         start_time = time.time()
         display_tree(element, tree)
         print("--- %s seconds ---" % (time.time() - start_time))
-        self.stackedWidget.setCurrentIndex(2)
+        self.setCurrentIndex(2)
 
     def update_chart(self):
         file = self.treeWidget.currentItem().file
@@ -111,9 +120,6 @@ class MainWindow(QDialog):
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     main_window = MainWindow()
-    widget = QtWidgets.QStackedWidget()
-    widget.addWidget(main_window)
-    widget.setFixedHeight(850)
-    widget.setFixedWidth(1400)
-    widget.show()
+    main_window.resize(1400, 850)
+    main_window.show()
     sys.exit(app.exec_())
