@@ -24,7 +24,6 @@ class ButtonStyles(StrEnum):
     QPushButton:hover {
     background-color: rgb(255, 246, 242);
     }'''
-
     SELECTED_BUTTON_STYLE_SHEET = '''QPushButton {
     background-color: rgb(255, 186, 158); 
     border-style: solid;
@@ -97,7 +96,7 @@ class MainWindow(QStackedWidget):
 
     def calculate_files_count(self):
         self.setCurrentIndex(1)
-        movie = QMovie('loading.gif')
+        movie = QMovie('searching.gif')
         self.label_3.setMovie(movie)
         movie.start()
         if self.lineEdit.text():
@@ -109,9 +108,12 @@ class MainWindow(QStackedWidget):
         self.calculating_task.start()
 
     def on_preparing(self, prepared_files_count):
-        self.progressBar.setFormat(f'{prepared_files_count} files prepared...')
+        self.progressBar.setFormat(f'{prepared_files_count} files found...')
 
     def on_calculating_files_count_finished(self, required_files_count):
+        movie = QMovie(f'loading.gif')
+        self.label_3.setMovie(movie)
+        movie.start()
         self.task = DiskUsage.CalculatingMemoryUsage(self.processed_disk, required_files_count)
         self.task.updated.connect(self.on_update)
         self.task.finished.connect(self.start_building_widget_on_finish_calculating)
