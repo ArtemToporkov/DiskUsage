@@ -19,6 +19,9 @@
   <property name="windowTitle">
    <string>StackedWidget</string>
   </property>
+  <property name="styleSheet">
+   <string notr="true">background-color: rgb(255, 239, 232);</string>
+  </property>
   <property name="currentIndex">
    <number>0</number>
   </property>
@@ -111,12 +114,29 @@
         <verstretch>0</verstretch>
        </sizepolicy>
       </property>
+      <property name="minimumSize">
+       <size>
+        <width>500</width>
+        <height>50</height>
+       </size>
+      </property>
       <property name="font">
        <font>
         <family>Montserrat Medium</family>
         <pointsize>15</pointsize>
         <stylestrategy>PreferAntialias</stylestrategy>
        </font>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">QPushButton {
+background-color: rgb(255, 255, 255);
+border-style: solid;
+border-radius: 15px;
+}
+
+QPushButton:hover {
+background-color: rgb(255, 246, 242);
+}</string>
       </property>
       <property name="text">
        <string>Show me how I use the memory!</string>
@@ -180,7 +200,7 @@
       <property name="minimumSize">
        <size>
         <width>750</width>
-        <height>0</height>
+        <height>30</height>
        </size>
       </property>
       <property name="baseSize">
@@ -188,6 +208,11 @@
         <width>0</width>
         <height>0</height>
        </size>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">background-color: rgb(255, 255, 255);
+border-style: solid;
+border-radius: 15px;</string>
       </property>
       <property name="alignment">
        <set>Qt::AlignCenter</set>
@@ -219,25 +244,130 @@
      <verstretch>0</verstretch>
     </sizepolicy>
    </property>
-   <widget class="QProgressBar" name="progressBar">
-    <property name="geometry">
-     <rect>
-      <x>330</x>
-      <y>410</y>
-      <width>591</width>
-      <height>41</height>
-     </rect>
-    </property>
-    <property name="sizePolicy">
-     <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-      <horstretch>0</horstretch>
-      <verstretch>0</verstretch>
-     </sizepolicy>
-    </property>
-    <property name="value">
-     <number>24</number>
-    </property>
-   </widget>
+   <layout class="QGridLayout" name="gridLayout_3">
+    <item row="3" column="1">
+     <widget class="QProgressBar" name="progressBar">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="minimumSize">
+       <size>
+        <width>0</width>
+        <height>30</height>
+       </size>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">QProgressBar {
+background-color: rgb(250, 250, 250);
+border-style: solid;
+border-radius: 15px;
+text-align: center;
+}
+
+QProgressBar::chunk {
+background-color: rgb(255, 186, 158);
+border-radius: 15px;
+}</string>
+      </property>
+      <property name="value">
+       <number>24</number>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+      </property>
+     </widget>
+    </item>
+    <item row="3" column="2">
+     <spacer name="horizontalSpacer_6">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <property name="sizeType">
+       <enum>QSizePolicy::Fixed</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>40</width>
+        <height>20</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+    <item row="4" column="1">
+     <spacer name="verticalSpacer_6">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <property name="sizeType">
+       <enum>QSizePolicy::Fixed</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>20</width>
+        <height>40</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+    <item row="3" column="0">
+     <spacer name="horizontalSpacer_5">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <property name="sizeType">
+       <enum>QSizePolicy::Fixed</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>40</width>
+        <height>20</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+    <item row="2" column="1">
+     <spacer name="verticalSpacer_7">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <property name="sizeType">
+       <enum>QSizePolicy::Fixed</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>20</width>
+        <height>40</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+    <item row="1" column="1" alignment="Qt::AlignHCenter">
+     <widget class="QLabel" name="label_3">
+      <property name="text">
+       <string>TextLabel</string>
+      </property>
+     </widget>
+    </item>
+    <item row="0" column="1">
+     <spacer name="verticalSpacer_8">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <property name="sizeType">
+       <enum>QSizePolicy::Fixed</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>20</width>
+        <height>40</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+   </layout>
   </widget>
   <widget class="QWidget" name="page_3">
    <property name="sizePolicy">
@@ -308,6 +438,11 @@
         <stylestrategy>PreferDefault</stylestrategy>
        </font>
       </property>
+      <property name="styleSheet">
+       <string notr="true">background-color: rgb(255, 255, 255);
+border-style: solid;
+border-radius: 15px;</string>
+      </property>
      </widget>
     </item>
     <item row="2" column="1">
@@ -341,6 +476,25 @@
        <font>
         <stylestrategy>PreferDefault</stylestrategy>
        </font>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">QTreeWidget {
+background-color: rgb(255, 255, 255);
+border-style: solid;
+border-radius: 15px;
+}
+QHeaderView {
+background-color: rgb(255, 255, 255);
+border-style: solid;
+border-radius: 15px;
+}
+QHeaderView::section {
+background-color: rgb(255, 255, 255);
+border-style: solid;
+border-radius: 15px;
+}
+
+</string>
       </property>
       <column>
        <property name="text">

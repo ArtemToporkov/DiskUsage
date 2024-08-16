@@ -6,11 +6,34 @@ import DiskUsage
 from PyQt5.QtWidgets import QApplication, QMainWindow
 import sys
 from PyQt5.QtChart import QChart, QChartView, QPieSeries, QPieSlice
-from PyQt5.QtGui import QPainter, QPen, QColor, QFont
+from PyQt5.QtGui import QPainter, QPen, QColor, QFont, QMovie
 from PyQt5.QtCore import Qt, pyqtSignal
 import win32api
 from functools import partial
 import time
+from enum import StrEnum
+
+
+class ButtonStyles(StrEnum):
+    BUTTON_STYLE_SHEET = '''QPushButton {
+    background-color: rgb(255, 255, 255);
+    border-style: solid;
+    border-radius: 15px;
+    }
+
+    QPushButton:hover {
+    background-color: rgb(255, 246, 242);
+    }'''
+
+    SELECTED_BUTTON_STYLE_SHEET = '''QPushButton {
+    background-color: rgb(255, 186, 158);
+    border-style: solid;
+    border-radius: 15px;
+    }
+    
+    QPushButton:hover {
+    background-color: rgb(255, 149, 107);
+    }'''
 
 
 class QFileItem(QTreeWidgetItem):
@@ -18,8 +41,12 @@ class QFileItem(QTreeWidgetItem):
         info = [
             file.name,
             str(file.size),
-            file.creation_date.strftime('%H:%M:%S %d.%m.%y') if file.extension != 'protected system file' else '??:??:?? ??.??.????',
-            file.change_date.strftime('%H:%M:%S %d.%m.%y') if file.extension != 'protected system file' else '??:??:?? ??.??.????',
+            file.creation_date.strftime('%H:%M:%S %d.%m.%y')
+            if file.extension != 'protected system file'
+            else '??:??:?? ??.??.????',
+            file.change_date.strftime('%H:%M:%S %d.%m.%y')
+            if file.extension != 'protected system file'
+            else '??:??:?? ??.??.????',
             str(file.extension)
         ]
         super().__init__(info)
@@ -40,16 +67,24 @@ class MainWindow(QStackedWidget):
         for disk in self.get_disks():
             disk_button = QPushButton(disk)
             disk_button.setFixedHeight(80)
+            disk_button.setStyleSheet(ButtonStyles.BUTTON_STYLE_SHEET)
             disk_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
             disk_button.setFont(QFont('Montserrat bold', 20))
-            disk_button.clicked.connect(partial(self.set_directory, disk_button.text()))
+            disk_button.clicked.connect(partial(self.set_directory, disk_button))
             self.horizontalLayout.addWidget(disk_button)
 
-    def set_directory(self, text):
+    def set_directory(self, disk_button):
         print(self.size())
         print(self.startButton.size())
         print(self.currentWidget())
-        self.processed_disk = text + ':\\'
+        self.processed_disk = disk_button.text() + ':\\'
+        disk_button.setStyleSheet(ButtonStyles.SELECTED_BUTTON_STYLE_SHEET)
+        for button in (self.horizontalLayout.itemAt(i).widget() for i in range(self.horizontalLayout.count())):
+            button.setStyleSheet(ButtonStyles.BUTTON_STYLE_SHEET
+                                 if button != disk_button
+                                 else ButtonStyles.SELECTED_BUTTON_STYLE_SHEET)
+
+
 
     def get_disks(self):
         drives = win32api.GetLogicalDriveStrings()
@@ -59,6 +94,9 @@ class MainWindow(QStackedWidget):
 
     def start_building_tree(self):
         self.setCurrentIndex(1)
+        movie = QMovie('loading.gif')
+        self.label_3.setMovie(movie)
+        movie.start()
         if self.lineEdit.text():
             self.processed_disk = self.lineEdit.text()
         required_files_count = DiskUsage.get_files_count(self.processed_disk)
@@ -67,12 +105,15 @@ class MainWindow(QStackedWidget):
         self.task.finished.connect(self.start_building_widget_on_finish_calculating)
         self.task.start()
 
-    def on_update(self, data):
-        self.progressBar.setValue(int(data))
+    def on_update(self, count, req_count):
+        progress = int(count / req_count * 100)
+        self.progressBar.setFormat(f'{progress}% ({count}/{req_count} files processed)')
+        self.progressBar.setValue(progress)
 
     def on_text_changed(self):
         for button in (self.horizontalLayout.itemAt(i).widget() for i in range(self.horizontalLayout.count())):
             button.setEnabled(not self.lineEdit.text())
+            button.setStyleSheet(ButtonStyles.BUTTON_STYLE_SHEET)
 
     def start_building_widget_on_finish_calculating(self, tree):
         element = QFileItem(tree)
