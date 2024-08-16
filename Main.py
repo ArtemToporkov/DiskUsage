@@ -26,13 +26,13 @@ class ButtonStyles(StrEnum):
     }'''
 
     SELECTED_BUTTON_STYLE_SHEET = '''QPushButton {
-    background-color: rgb(255, 186, 158);
+    background-color: rgb(255, 186, 158); 
     border-style: solid;
     border-radius: 15px;
     }
     
     QPushButton:hover {
-    background-color: rgb(255, 149, 107);
+    background-color: rgb(255, 200, 179);
     }'''
 
 
@@ -41,12 +41,15 @@ class QFileItem(QTreeWidgetItem):
         info = [
             file.name,
             str(file.size),
+
             file.creation_date.strftime('%H:%M:%S %d.%m.%y')
             if file.extension != 'protected system file'
             else '??:??:?? ??.??.????',
+
             file.change_date.strftime('%H:%M:%S %d.%m.%y')
             if file.extension != 'protected system file'
             else '??:??:?? ??.??.????',
+
             str(file.extension)
         ]
         super().__init__(info)
@@ -58,7 +61,7 @@ class MainWindow(QStackedWidget):
         super(MainWindow, self).__init__()
         loadUi('diskUsage.ui', self)
         self.processed_disk = ''
-        self.startButton.clicked.connect(self.start_building_tree)
+        self.startButton.clicked.connect(self.calculate_files_count)
         self.treeWidget.header().resizeSection(0, 300)
         self.treeWidget.header().resizeSection(1, 50)
         self.treeWidget.itemClicked.connect(self.update_chart)
@@ -92,14 +95,23 @@ class MainWindow(QStackedWidget):
         drives = [drive.split(':')[0] for drive in drives]
         return drives
 
-    def start_building_tree(self):
+    def calculate_files_count(self):
         self.setCurrentIndex(1)
         movie = QMovie('loading.gif')
         self.label_3.setMovie(movie)
         movie.start()
         if self.lineEdit.text():
             self.processed_disk = self.lineEdit.text()
-        required_files_count = DiskUsage.get_files_count(self.processed_disk)
+        self.calculating_task = DiskUsage.CalculatingFilesCount(self.processed_disk)
+        self.calculating_task.finished.connect(self.on_calculating_files_count_finished)
+        self.calculating_task.updated.connect(self.on_preparing)
+        self.progressBar.setValue(0)
+        self.calculating_task.start()
+
+    def on_preparing(self, prepared_files_count):
+        self.progressBar.setFormat(f'{prepared_files_count} files prepared...')
+
+    def on_calculating_files_count_finished(self, required_files_count):
         self.task = DiskUsage.CalculatingMemoryUsage(self.processed_disk, required_files_count)
         self.task.updated.connect(self.on_update)
         self.task.finished.connect(self.start_building_widget_on_finish_calculating)

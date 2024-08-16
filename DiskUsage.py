@@ -28,6 +28,26 @@ class File:
             self.parents = []
 
 
+class CalculatingFilesCount(QtCore.QThread):
+    finished = QtCore.pyqtSignal(int)
+    updated = QtCore.pyqtSignal(int)
+
+    def __init__(self, disk):
+        super(CalculatingFilesCount, self).__init__()
+        self.disk = disk
+
+    def run(self):
+        count = self.get_files_count(self.disk)
+        self.finished.emit(count)
+
+    def get_files_count(self, directory):
+        c = 0
+        for root, dirs, files in os.walk(directory):
+            c += len(dirs) + len(files)
+            self.updated.emit(c)
+        return c
+
+
 class CalculatingMemoryUsage(QtCore.QThread):
     updated = QtCore.pyqtSignal(int, int)
     finished = QtCore.pyqtSignal(File)
@@ -76,11 +96,4 @@ class CalculatingMemoryUsage(QtCore.QThread):
 
     def stop(self):
         self.running = False
-
-
-def get_files_count(directory):
-    c = 0
-    for root, dirs, files in os.walk(directory):
-        c += len(dirs) + len(files)
-    return c
 
