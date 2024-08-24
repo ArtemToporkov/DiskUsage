@@ -61,11 +61,11 @@ class MainWindow(QStackedWidget):
         loadUi('diskUsage.ui', self)
         self.processed_disk = ''
         self.startButton.clicked.connect(self.calculate_files_count)
-        self.treeWidget.header().resizeSection(0, 300)
-        self.treeWidget.header().resizeSection(1, 50)
-        self.treeWidget.itemClicked.connect(self.update_chart)
+        self.filesTreeWidget.header().resizeSection(0, 300)
+        self.filesTreeWidget.header().resizeSection(1, 50)
+        self.filesTreeWidget.itemClicked.connect(partial(self.update_chart, None))
         self.chart.setRenderHint(QPainter.Antialiasing)
-        self.lineEdit.textChanged.connect(self.on_text_changed)
+        self.customPathEdit.textChanged.connect(self.on_text_changed)
         for disk in self.get_disks():
             disk_button = QPushButton(disk)
             disk_button.setFixedHeight(80)
@@ -73,7 +73,7 @@ class MainWindow(QStackedWidget):
             disk_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
             disk_button.setFont(QFont('Montserrat bold', 20))
             disk_button.clicked.connect(partial(self.set_directory, disk_button))
-            self.horizontalLayout.addWidget(disk_button)
+            self.disksLayout.addWidget(disk_button)
 
     def set_directory(self, disk_button):
         print(self.size())
@@ -81,26 +81,18 @@ class MainWindow(QStackedWidget):
         print(self.currentWidget())
         self.processed_disk = disk_button.text() + ':\\'
         disk_button.setStyleSheet(ButtonStyles.SELECTED_BUTTON_STYLE_SHEET)
-        for button in (self.horizontalLayout.itemAt(i).widget() for i in range(self.horizontalLayout.count())):
+        for button in (self.disksLayout.itemAt(i).widget() for i in range(self.disksLayout.count())):
             button.setStyleSheet(ButtonStyles.BUTTON_STYLE_SHEET
                                  if button != disk_button
                                  else ButtonStyles.SELECTED_BUTTON_STYLE_SHEET)
-
-
-
-    def get_disks(self):
-        drives = win32api.GetLogicalDriveStrings()
-        drives = drives.split('\000')[:-1]
-        drives = [drive.split(':')[0] for drive in drives]
-        return drives
 
     def calculate_files_count(self):
         self.setCurrentIndex(1)
         movie = QMovie('searching.gif')
         self.label_3.setMovie(movie)
         movie.start()
-        if self.lineEdit.text():
-            self.processed_disk = self.lineEdit.text()
+        if self.customPathEdit.text():
+            self.processed_disk = self.customPathEdit.text()
         self.calculating_task = DiskUsage.CalculatingFilesCount(self.processed_disk)
         self.calculating_task.finished.connect(self.on_calculating_files_count_finished)
         self.calculating_task.updated.connect(self.on_preparing)
@@ -114,10 +106,10 @@ class MainWindow(QStackedWidget):
         movie = QMovie(f'loading.gif')
         self.label_3.setMovie(movie)
         movie.start()
-        self.task = DiskUsage.CalculatingMemoryUsage(self.processed_disk, required_files_count)
-        self.task.updated.connect(self.on_update)
-        self.task.finished.connect(self.start_building_widget_on_finish_calculating)
-        self.task.start()
+        self.processing_files_task = DiskUsage.CalculatingMemoryUsage(self.processed_disk, required_files_count)
+        self.processing_files_task.updated.connect(self.on_update)
+        self.processing_files_task.finished.connect(self.start_building_widget_on_finish_calculating)
+        self.processing_files_task.start()
 
     def on_update(self, count, req_count):
         progress = int(count / req_count * 100)
@@ -125,14 +117,15 @@ class MainWindow(QStackedWidget):
         self.progressBar.setValue(progress)
 
     def on_text_changed(self):
-        for button in (self.horizontalLayout.itemAt(i).widget() for i in range(self.horizontalLayout.count())):
-            button.setEnabled(not self.lineEdit.text())
+        for button in (self.disksLayout.itemAt(i).widget() for i in range(self.disksLayout.count())):
+            button.setEnabled(not self.customPathEdit.text())
             button.setStyleSheet(ButtonStyles.BUTTON_STYLE_SHEET)
 
     def start_building_widget_on_finish_calculating(self, tree):
         element = QFileItem(tree)
-        self.treeWidget.addTopLevelItem(element)
+        self.filesTreeWidget.addTopLevelItem(element)
         element.setExpanded(True)
+        element.setSelected(True)
 
         def display_tree(el, catalog: DiskUsage.File):
             content = catalog.files + catalog.folders
@@ -144,11 +137,14 @@ class MainWindow(QStackedWidget):
 
         start_time = time.time()
         display_tree(element, tree)
+        self.update_chart(tree)
+        self.current_selected_folder = element
         print("--- %s seconds ---" % (time.time() - start_time))
         self.setCurrentIndex(2)
 
-    def update_chart(self):
-        file = self.treeWidget.currentItem().file
+    def update_chart(self, item):
+        self.current_selected_folder = self.filesTreeWidget.currentItem()
+        file = self.current_selected_folder.file if item is None else item
         if file.extension != '':
             return
         series = QPieSeries()
@@ -159,9 +155,9 @@ class MainWindow(QStackedWidget):
         chart = QChart()
         chart.setAnimationOptions(QChart.SeriesAnimations)
         chart.addSeries(series)
-        chart.legend().hide()
         self.chart.setChart(chart)
         series.hovered.connect(self.on_hovered)
+        series.clicked.connect(self.on_clicked)
 
     def on_hovered(self, slice: QPieSlice, state):
         if state:
@@ -170,6 +166,22 @@ class MainWindow(QStackedWidget):
         else:
             slice.setExploded(False)
             slice.setLabelVisible(False)
+
+    def on_clicked(self, slice: QPieSlice):
+        file_name = slice.label().title().lower()
+        print(file_name)
+        for child in (self.current_selected_folder.child(i) for i in range(self.current_selected_folder.childCount())):
+            if file_name == child.file.name.lower():
+                child.setSelected(True)
+            else:
+                child.setSelected(False)
+
+    @staticmethod
+    def get_disks():
+        drives = win32api.GetLogicalDriveStrings()
+        drives = drives.split('\000')[:-1]
+        drives = [drive.split(':')[0] for drive in drives]
+        return drives
 
 
 if __name__ == '__main__':

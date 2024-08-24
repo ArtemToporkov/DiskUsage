@@ -183,14 +183,14 @@ background-color: rgb(255, 246, 242);
      </widget>
     </item>
     <item row="2" column="1">
-     <layout class="QHBoxLayout" name="horizontalLayout">
+     <layout class="QHBoxLayout" name="disksLayout">
       <property name="sizeConstraint">
        <enum>QLayout::SetNoConstraint</enum>
       </property>
      </layout>
     </item>
     <item row="4" column="1" alignment="Qt::AlignHCenter">
-     <widget class="QLineEdit" name="lineEdit">
+     <widget class="QLineEdit" name="customPathEdit">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
         <horstretch>0</horstretch>
@@ -462,7 +462,7 @@ border-radius: 15px;</string>
      </spacer>
     </item>
     <item row="1" column="1">
-     <widget class="QTreeWidget" name="treeWidget">
+     <widget class="QTreeWidget" name="filesTreeWidget">
       <property name="enabled">
        <bool>true</bool>
       </property>
@@ -494,6 +494,107 @@ border-style: solid;
 border-radius: 15px;
 }
 
+QScrollBar:vertical {
+	border: none;
+    background: rgb(255, 246, 242);
+    width: 14px;
+    margin: 15px 0 15px 0;
+	border-radius: 0px;
+ }
+
+/*  HANDLE BAR VERTICAL */
+QScrollBar::handle:vertical {	
+	background-color: rgb(255, 186, 158);
+	min-height: 30px;
+	border-radius: 7px;
+}
+
+QScrollBar::handle:vertical:hover{	
+	background-color: rgb(255, 200, 179);
+}
+
+QScrollBar::sub-line:vertical {
+	border: none;
+	background-color: rgb(255, 186, 158);
+	height: 15px;
+	border-top-left-radius: 7px;
+	border-top-right-radius: 7px;
+	border-bottom-left-radius: 7px;
+	border-bottom-right-radius: 7px;
+	subcontrol-position: top;
+	subcontrol-origin: margin;
+}
+QScrollBar::sub-line:vertical:hover {	
+	background-color:  rgb(255, 200, 179);
+}
+QScrollBar::add-line:vertical {
+	border: none;
+	background-color: rgb(255, 186, 158);
+	height: 15px;
+	border-top-left-radius: 7px;
+	border-top-right-radius: 7px;
+	border-bottom-left-radius: 7px;
+	border-bottom-right-radius: 7px;
+	subcontrol-position: bottom;
+	subcontrol-origin: margin;
+}
+QScrollBar::sub-line:vertical:hover {	
+	background-color:  rgb(255, 200, 179);
+}
+
+QScrollBar:horizontal {
+	border: none;
+    background: rgb(255, 246, 242);
+	height: 14 px;
+	margin: 0 15px 0 15px;
+	border-radius: 0px;
+ }
+
+/*  HANDLE BAR VERTICAL */
+QScrollBar::handle:horizontal {	
+	background-color: rgb(255, 186, 158);
+	min-width: 30px;
+	border-radius: 7px;
+}
+QScrollBar::handle:horizontal:hover{	
+	background-color: rgb(255, 200, 179);
+}
+QScrollBar::sub-line:horizontal {
+	border: none;
+	background-color: rgb(255, 186, 158);
+	width: 15px;
+	border-top-left-radius: 7px;
+	border-top-right-radius: 7px;
+	border-bottom-left-radius: 7px;
+	border-bottom-right-radius: 7px;
+	subcontrol-position: left;
+	subcontrol-origin: margin;
+}
+QScrollBar::sub-line:horizontal:hover {	
+	background-color:  rgb(255, 200, 179);
+}
+QScrollBar::add-line:horizontal {
+	border: none;
+	background-color: rgb(255, 186, 158);
+	width: 15px;
+	border-top-left-radius: 7px;
+	border-top-right-radius: 7px;
+	border-bottom-left-radius: 7px;
+	border-bottom-right-radius: 7px;
+	subcontrol-position: right;
+	subcontrol-origin: margin;
+}
+QScrollBar::sub-line:horizontal:hover {	
+	background-color:  rgb(255, 200, 179);
+}
+
+QScrollBar:horizontal {
+	border: none;
+    background: rgb(255, 246, 242);
+	width: 14 px;
+	margin: 0 15px 0 15px;
+	border-radius: 0px;
+ }
 </string>
       </property>
       <column>
