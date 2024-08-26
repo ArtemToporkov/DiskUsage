@@ -14,7 +14,7 @@ class File:
             self.size = 0 if os.path.isdir(path) else os.path.getsize(path)
             self.creation_date = datetime.datetime.fromtimestamp(os.path.getctime(path))
             self.change_date = datetime.datetime.fromtimestamp(os.path.getmtime(path))
-            self.extension = os.path.splitext(path)[1]
+            self.extension = self.get_file_extension(path)
             self.files = []
             self.folders = []
             self.parents = []
@@ -26,6 +26,10 @@ class File:
             self.files = []
             self.folders = []
             self.parents = []
+
+    @staticmethod
+    def get_file_extension(path):
+        return os.path.splitext(path)[1] if os.path.isfile(path) else ''
 
 
 class CalculatingFilesCount(QtCore.QThread):
@@ -73,6 +77,8 @@ class CalculatingMemoryUsage(QtCore.QThread):
                     folder_instance = File(file.path)
                     current.folders.append(folder_instance)
                     folder_instance.parents.append(current)
+                    for parent in current.parents:
+                        folder_instance.parents.append(parent)
                 else:
                     file_instance = File(file.path)
                     current.files.append(file_instance)

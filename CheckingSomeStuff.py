@@ -1,7 +1,4 @@
-import os 
+from pathlib import Path
 
-a = os.listdir('E:\\Camera')
-b = os.listdir('D:\\photos')
-for i in b:
-    if i not in a:
-        print(i)
+file = Path('D:\\Unity\\2022.3.19f1')
+print(file.suffix)
