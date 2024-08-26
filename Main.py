@@ -108,8 +108,15 @@ class MainWindow(QStackedWidget):
         movie.start()
         self.processing_files_task = DiskUsage.CalculatingMemoryUsage(self.processed_disk, required_files_count)
         self.processing_files_task.updated.connect(self.on_update)
-        self.processing_files_task.finished.connect(self.start_building_widget_on_finish_calculating)
+        self.processing_files_task.finished.connect(self.on_preparing_files_finished)
         self.processing_files_task.start()
+
+    def on_preparing_files_finished(self, tree: DiskUsage.File, required_files_count: int):
+        self.updating_size_task = DiskUsage.UpdatingFoldersSize(tree, required_files_count)
+        self.updating_size_task.updated.connect(self.on_update)
+        self.updating_size_task.finished.connect(self.start_building_widget_on_finish_calculating)
+        self.updating_size_task.start()
+
 
     def on_update(self, count, req_count):
         progress = int(count / req_count * 100)

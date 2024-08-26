@@ -9,7 +9,7 @@ from PyQt5 import QtCore
 class File:
     def __init__(self, path: str):
         try:
-            self.name = os.path.basename(path)
+            self.name = self.get_catalog_name(path)
             self.location = path
             self.size = 0 if os.path.isdir(path) else os.path.getsize(path)
             self.creation_date = datetime.datetime.fromtimestamp(os.path.getctime(path))
@@ -18,6 +18,7 @@ class File:
             self.files = []
             self.folders = []
             self.parents = []
+            self.children = []
         except FileNotFoundError:
             self.name = os.path.basename(path)
             self.location = path
@@ -26,10 +27,21 @@ class File:
             self.files = []
             self.folders = []
             self.parents = []
+            self.children = []
+
+    def is_file(self):
+        return os.path.isfile(self.location)
 
     @staticmethod
     def get_file_extension(path):
         return os.path.splitext(path)[1] if os.path.isfile(path) else ''
+
+    @staticmethod
+    def get_catalog_name(path):
+        name = os.path.basename(path)
+        if not name:
+            return path.split(':')[0]
+        return name
 
 
 class CalculatingFilesCount(QtCore.QThread):
@@ -54,7 +66,7 @@ class CalculatingFilesCount(QtCore.QThread):
 
 class CalculatingMemoryUsage(QtCore.QThread):
     updated = QtCore.pyqtSignal(int, int)
-    finished = QtCore.pyqtSignal(File)
+    finished = QtCore.pyqtSignal(File, int)
     running = False
 
     def __init__(self, disk, required_count):
@@ -68,7 +80,7 @@ class CalculatingMemoryUsage(QtCore.QThread):
 
     def run(self):
         tree = self.build_tree()
-        self.finished.emit(tree)
+        self.finished.emit(tree, self.required_count)
 
     def fill_disk_usage(self, path: str, current: File):
         try:
@@ -77,14 +89,10 @@ class CalculatingMemoryUsage(QtCore.QThread):
                     folder_instance = File(file.path)
                     current.folders.append(folder_instance)
                     folder_instance.parents.append(current)
-                    for parent in current.parents:
-                        folder_instance.parents.append(parent)
                 else:
                     file_instance = File(file.path)
                     current.files.append(file_instance)
-                    current.size += file_instance.size
-                    for parent in current.parents:
-                        parent.size += file_instance.size
+
         except PermissionError:
             pass
         self.count += len(current.folders) + len(current.files)
@@ -102,4 +110,37 @@ class CalculatingMemoryUsage(QtCore.QThread):
 
     def stop(self):
         self.running = False
+
+
+class UpdatingFoldersSize(QtCore.QThread):
+    updated = QtCore.pyqtSignal(int, int)
+    finished = QtCore.pyqtSignal(File)
+    running = False
+
+    def __init__(self, tree: File, required_count: int):
+        super(UpdatingFoldersSize, self).__init__()
+        self.tree = tree
+        self.required_count = required_count
+        self.count = 0
+        self.running = True
+
+    def run(self):
+        self.update_size(self.tree)
+        self.finished.emit(self.tree)
+
+    def update_size(self, file: File):
+        if not file.files and not file.folders:
+            return
+        self.count += len(file.folders) + len(file.files)
+        self.updated.emit(self.count, self.required_count)
+        for child_file in file.files:
+            file.size += child_file.size
+        for child_folder in file.folders:
+            self.update_size(child_folder)
+            file.size += child_folder.size
+
+    def stop(self):
+        self.running = False
+
+
 
