@@ -23,7 +23,7 @@
    <string notr="true">background-color: rgb(255, 239, 232);</string>
   </property>
   <property name="currentIndex">
-   <number>2</number>
+   <number>0</number>
   </property>
   <widget class="QWidget" name="page_1">
    <property name="sizePolicy">
@@ -875,6 +875,11 @@ height: 12px;
            </item>
            <item>
             <property name="text">
+             <string>extension</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
              <string>change date</string>
             </property>
            </item>
@@ -990,7 +995,7 @@ QCheckBox::indicator:unchecked {
   </customwidget>
  </customwidgets>
  <resources>
-  <include location="assets/icons/down arrow.qrc"/>
+  <include location="../assets/icons/down arrow.qrc"/>
  </resources>
  <connections/>
 </ui>

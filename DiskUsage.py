@@ -4,6 +4,9 @@ from PyQt5.QtChart import QChartView
 import time
 import PyQt5
 from PyQt5 import QtCore
+import win32security
+import win32api
+import pywintypes
 
 
 class File:
@@ -15,19 +18,25 @@ class File:
             self.creation_date = datetime.datetime.fromtimestamp(os.path.getctime(path))
             self.change_date = datetime.datetime.fromtimestamp(os.path.getmtime(path))
             self.extension = self.get_file_extension(path)
+            self.owner = self.get_owner(path)
             self.files = []
             self.folders = []
             self.parents = []
             self.children = []
+            self.grouped = False
         except FileNotFoundError:
             self.name = os.path.basename(path)
             self.location = path
+            self.creation_date = None
+            self.change_date = None
             self.extension = 'protected system file'
+            self.owner = '???'
             self.size = 0
             self.files = []
             self.folders = []
             self.parents = []
             self.children = []
+            self.grouped = False
 
     def is_file(self):
         return os.path.isfile(self.location)
@@ -42,6 +51,15 @@ class File:
         if not name:
             return path.split(':')[0]
         return name
+
+    @staticmethod
+    def get_owner(path):
+        try:
+            sid = win32security.GetFileSecurity(path, win32security.OWNER_SECURITY_INFORMATION).GetSecurityDescriptorOwner()
+            owner = win32security.LookupAccountSid(None, sid)[0]
+            return owner
+        except pywintypes.error:
+            return 'Access denied.'
 
 
 class CalculatingFilesCount(QtCore.QThread):
@@ -114,7 +132,7 @@ class CalculatingMemoryUsage(QtCore.QThread):
 
 class UpdatingFoldersSize(QtCore.QThread):
     updated = QtCore.pyqtSignal(int, int)
-    finished = QtCore.pyqtSignal(File)
+    finished = QtCore.pyqtSignal(File, int)
     running = False
 
     def __init__(self, tree: File, required_count: int):
@@ -126,7 +144,7 @@ class UpdatingFoldersSize(QtCore.QThread):
 
     def run(self):
         self.update_size(self.tree)
-        self.finished.emit(self.tree)
+        self.finished.emit(self.tree, self.required_count)
 
     def update_size(self, file: File):
         if not file.files and not file.folders:

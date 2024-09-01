@@ -12,9 +12,11 @@ import win32api
 from functools import partial
 import time
 from enum import StrEnum
+import downArrow
+import math
+from datetime import datetime, timedelta
 
-
-class ButtonStyles(StrEnum):
+class Styles(StrEnum):
     BUTTON_STYLE_SHEET = '''QPushButton {
     background-color: rgb(255, 255, 255);
     border-style: solid;
@@ -33,6 +35,9 @@ class ButtonStyles(StrEnum):
     QPushButton:hover {
     background-color: rgb(255, 200, 179);
     }'''
+    GROUP_STYLE = '''QTreeWidgetItem {
+        background-color: rgb(255, 239, 232);
+    }'''
 
 
 class QFileItem(QTreeWidgetItem):
@@ -49,7 +54,8 @@ class QFileItem(QTreeWidgetItem):
             if file.extension != 'protected system file'
             else '??:??:?? ??.??.????',
 
-            str(file.extension)
+            str(file.extension),
+            file.owner
         ]
         super().__init__(info)
         self.file = file
@@ -58,43 +64,139 @@ class QFileItem(QTreeWidgetItem):
 class MainWindow(QStackedWidget):
     def __init__(self):
         super(MainWindow, self).__init__()
-        loadUi('diskUsage.ui', self)
+        loadUi('ui/diskUsage.ui', self)
         self.processed_disk = ''
+        self.connect_combo_boxes()
+        self.current_selected_folder = None
         self.startButton.clicked.connect(self.calculate_files_count)
         self.filesTreeWidget.header().resizeSection(0, 300)
         self.filesTreeWidget.header().resizeSection(1, 50)
-        self.filesTreeWidget.itemClicked.connect(partial(self.update_chart, None))
+        self.filesTreeWidget.header().resizeSection(4, 100)
+        self.filesTreeWidget.itemClicked.connect(partial(self.on_selection_new_item, None))
         self.chart.setRenderHint(QPainter.Antialiasing)
         self.customPathEdit.textChanged.connect(self.on_text_changed)
         for disk in self.get_disks():
             disk_button = QPushButton(disk)
             disk_button.setFixedHeight(80)
-            disk_button.setStyleSheet(ButtonStyles.BUTTON_STYLE_SHEET)
+            disk_button.setStyleSheet(Styles.BUTTON_STYLE_SHEET)
             disk_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
             disk_button.setFont(QFont('Montserrat bold', 20))
             disk_button.clicked.connect(partial(self.set_directory, disk_button))
             self.disksLayout.addWidget(disk_button)
+
+    def connect_combo_boxes(self):
+        self.groupingComboBox.currentTextChanged.connect(self.set_groups)
+
+    def set_groups(self, group):
+        if self.current_selected_folder.file.grouped:
+            self.ungroup()
+        match group:
+            case 'name':
+                self.group_by([('A-H', 'a', 'h'), ('I-P', 'i', 'p'), ('Q-Z', 'q', 'z')],
+                              lambda file_item: file_item.file.name[0].lower(),
+                              lambda file_item: not file_item.file.name[0].isalpha())
+            case 'size':
+                self.group_by([('huge (more than 10 gb)', 10737418240, math.inf),
+                               ('large (1 - 10 gb)', 1073741824, 10737418239),
+                               ('big (257-1023 mb)', 269484032, 1073741823),
+                               ('medium (1-256 mb)', 1048576, 269484031),
+                               ('small (16-1023 kb)', 17404, 1048575),
+                               ('tiny (1-16 kb)', 1, 17403),
+                               ('no size', 0, 0)],
+                              lambda file_item: file_item.file.size,
+                              lambda file_item: False)
+            case 'extension':
+                self.group_by_specific_data(lambda item: item.file.extension,
+                                            lambda item: not item.file.extension)
+            case 'owner':
+                self.group_by_specific_data(lambda item: item.file.owner,
+                                            lambda item: not item.file.owner)
+            case 'creation date' | 'change date':
+                today = datetime.today().date()
+                self.group_by([('today', today, today),
+                               ('last week', today - timedelta(days=7), today - timedelta(days=1)),
+                               ('last month', today - timedelta(days=30), today - timedelta(days=8)),
+                               ('this year', today - timedelta(days=365), today - timedelta(days=31)),
+                               ('last year', today - timedelta(days=730), today - timedelta(days=366)),
+                               ('waaay too long ago', datetime.min.date(), today - timedelta(days=731))],
+                              lambda file_item: self.get_specific_file_date(file_item, group),
+                              lambda file_item: not self.get_specific_file_date(file_item, group))
+
+    def group_by_specific_data(self, get_specific_data: callable, function_for_other: callable):
+        data = set()
+        for child in (self.current_selected_folder.child(i)
+                      for i in range(self.current_selected_folder.childCount())):
+            data_piece = get_specific_data(child)
+            if data_piece:
+                data.add(data_piece)
+        self.group_by([(data_piece, data_piece, data_piece) for data_piece in data],
+                      lambda file_item: get_specific_data(file_item),
+                      lambda file_item: function_for_other(file_item))
+
+    @staticmethod
+    def get_specific_file_date(item, date_name):
+        return item.file.creation_date.date() if date_name == 'creation date' else item.file.change_date.date()
+
+    @staticmethod
+    def remove_children_and_temporarily_save_them(item) -> list:
+        temp = []
+        for child in (item.child(i)
+                      for i in reversed(range(item.childCount()))):
+            temp.append(child)
+            item.removeChild(child)
+        return temp
+
+    def group_by(self, groups: list[tuple], comparison_function: callable, function_for_other: callable):
+        temp = self.remove_children_and_temporarily_save_them(self.current_selected_folder)
+        for group in groups:
+            group_item = QTreeWidgetItem([group[0], '', '', '', '', ''])
+            self.current_selected_folder.addChild(group_item)
+            group_item.setExpanded(True)
+            self.change_color_of_item(group_item, QColor(255, 239, 232))
+            files_that_match_group = [file for file in temp if group[1] <= comparison_function(file) <= group[2]]
+            if files_that_match_group:
+                group_item.addChildren(files_that_match_group)
+            else:
+                self.current_selected_folder.removeChild(group_item)
+        doesnt_match_any_group = [file for file in temp if function_for_other(file) and not file.parent()]
+        if doesnt_match_any_group:
+            other = QTreeWidgetItem(['other', '', '', '', '', ''])
+            self.current_selected_folder.addChild(other)
+            other.addChildren(doesnt_match_any_group)
+            self.change_color_of_item(other, QColor(255, 239, 232))
+            other.setExpanded(True)
+        self.current_selected_folder.file.grouped = True
+
+    def ungroup(self):
+        temp = []
+        for child in (self.current_selected_folder.child(i) for i in reversed(range(self.current_selected_folder.childCount()))):
+            for group_child in (child.child(k) for k in reversed(range(child.childCount()))):
+                temp.append(group_child)
+                child.removeChild(group_child)
+            self.current_selected_folder.removeChild(child)
+        self.current_selected_folder.addChildren(temp)
+        self.current_selected_folder.file.grouped = False
 
     def set_directory(self, disk_button):
         print(self.size())
         print(self.startButton.size())
         print(self.currentWidget())
         self.processed_disk = disk_button.text() + ':\\'
-        disk_button.setStyleSheet(ButtonStyles.SELECTED_BUTTON_STYLE_SHEET)
+        disk_button.setStyleSheet(Styles.SELECTED_BUTTON_STYLE_SHEET)
         for button in (self.disksLayout.itemAt(i).widget() for i in range(self.disksLayout.count())):
-            button.setStyleSheet(ButtonStyles.BUTTON_STYLE_SHEET
+            button.setStyleSheet(Styles.BUTTON_STYLE_SHEET
                                  if button != disk_button
-                                 else ButtonStyles.SELECTED_BUTTON_STYLE_SHEET)
+                                 else Styles.SELECTED_BUTTON_STYLE_SHEET)
 
     def calculate_files_count(self):
         self.setCurrentIndex(1)
-        movie = QMovie('searching.gif')
+        movie = QMovie('assets/gifs/searching.gif')
         self.label_3.setMovie(movie)
         movie.start()
         if self.customPathEdit.text():
             self.processed_disk = self.customPathEdit.text()
         self.calculating_task = DiskUsage.CalculatingFilesCount(self.processed_disk)
-        self.calculating_task.finished.connect(self.on_calculating_files_count_finished)
+        self.calculating_task.finished.connect(self.start_preparing_files_on_calculating_files_count_finished)
         self.calculating_task.updated.connect(self.on_preparing)
         self.progressBar.setValue(0)
         self.calculating_task.start()
@@ -102,21 +204,40 @@ class MainWindow(QStackedWidget):
     def on_preparing(self, prepared_files_count):
         self.progressBar.setFormat(f'{prepared_files_count} files found...')
 
-    def on_calculating_files_count_finished(self, required_files_count):
-        movie = QMovie(f'loading.gif')
+    def start_preparing_files_on_calculating_files_count_finished(self, required_files_count):
+        movie = QMovie(f'assets/gifs/preparing files.gif')
         self.label_3.setMovie(movie)
         movie.start()
         self.processing_files_task = DiskUsage.CalculatingMemoryUsage(self.processed_disk, required_files_count)
         self.processing_files_task.updated.connect(self.on_update)
-        self.processing_files_task.finished.connect(self.on_preparing_files_finished)
+        self.processing_files_task.finished.connect(self.update_files_size_on_preparing_files_finished)
         self.processing_files_task.start()
 
-    def on_preparing_files_finished(self, tree: DiskUsage.File, required_files_count: int):
+    def update_files_size_on_preparing_files_finished(self, tree: DiskUsage.File, required_files_count: int):
+        movie = QMovie(f'assets/gifs/updating size.gif')
+        self.label_3.setMovie(movie)
+        movie.start()
         self.updating_size_task = DiskUsage.UpdatingFoldersSize(tree, required_files_count)
         self.updating_size_task.updated.connect(self.on_update)
-        self.updating_size_task.finished.connect(self.start_building_widget_on_finish_calculating)
+        self.updating_size_task.finished.connect(self.build_widget_on_size_updating_finished)
         self.updating_size_task.start()
 
+    def build_widget_on_size_updating_finished(self, tree: DiskUsage.File, required_count: int):
+        movie = QMovie(f'assets/gifs/building widget.gif')
+        self.label_3.setMovie(movie)
+        movie.start()
+        self.building_widget_task = BuildingTreeWidget(tree, required_count)
+        self.building_widget_task.updated.connect(self.on_update)
+        self.building_widget_task.finished.connect(self.display_tree_on_widget_building_finished)
+        self.building_widget_task.start()
+
+    def display_tree_on_widget_building_finished(self, element: QFileItem):
+        self.filesTreeWidget.addTopLevelItem(element)
+        element.setExpanded(True)
+        element.setSelected(True)
+        self.on_selection_new_item(element)
+        self.current_selected_folder = element
+        self.setCurrentIndex(2)
 
     def on_update(self, count, req_count):
         progress = int(count / req_count * 100)
@@ -126,32 +247,15 @@ class MainWindow(QStackedWidget):
     def on_text_changed(self):
         for button in (self.disksLayout.itemAt(i).widget() for i in range(self.disksLayout.count())):
             button.setEnabled(not self.customPathEdit.text())
-            button.setStyleSheet(ButtonStyles.BUTTON_STYLE_SHEET)
+            button.setStyleSheet(Styles.BUTTON_STYLE_SHEET)
 
-    def start_building_widget_on_finish_calculating(self, tree):
-        element = QFileItem(tree)
-        self.filesTreeWidget.addTopLevelItem(element)
-        element.setExpanded(True)
-        element.setSelected(True)
-
-        def display_tree(el, catalog: DiskUsage.File):
-            content = catalog.files + catalog.folders
-            for item in content:
-                tree_item = QFileItem(item)
-                el.addChild(tree_item)
-                if item.extension == '':
-                    display_tree(tree_item, item)
-
-        start_time = time.time()
-        display_tree(element, tree)
-        self.update_chart(tree)
-        self.current_selected_folder = element
-        print("--- %s seconds ---" % (time.time() - start_time))
-        self.setCurrentIndex(2)
+    def on_selection_new_item(self, item):
+        self.update_chart(item)
+        self.update_filters(item)
 
     def update_chart(self, item):
         self.current_selected_folder = self.filesTreeWidget.currentItem()
-        file = self.current_selected_folder.file if item is None else item
+        file = self.current_selected_folder.file if item is None else item.file
         if file.extension != '':
             return
         series = QPieSeries()
@@ -166,6 +270,16 @@ class MainWindow(QStackedWidget):
         series.hovered.connect(self.on_hovered)
         series.clicked.connect(self.on_clicked)
 
+    def update_filters(self, item=None):
+        self.filterComboBox.clear()
+        self.filterComboBox.addItem('no filter')
+        selected_item = self.current_selected_folder if not item else item
+        extensions = set()
+        extensions = {file.extension for file in selected_item.file.files}
+        if selected_item.file.folders:
+            extensions.add('folders')
+        self.filterComboBox.addItems(extensions)
+
     def on_hovered(self, slice: QPieSlice, state):
         if state:
             slice.setExploded(True)
@@ -177,11 +291,13 @@ class MainWindow(QStackedWidget):
     def on_clicked(self, slice: QPieSlice):
         file_name = slice.label().title().lower()
         print(file_name)
+        print(type(self.current_selected_folder))
         for child in (self.current_selected_folder.child(i) for i in range(self.current_selected_folder.childCount())):
             if file_name == child.file.name.lower():
                 child.setSelected(True)
             else:
                 child.setSelected(False)
+
 
     @staticmethod
     def get_disks():
@@ -189,6 +305,44 @@ class MainWindow(QStackedWidget):
         drives = drives.split('\000')[:-1]
         drives = [drive.split(':')[0] for drive in drives]
         return drives
+
+    @staticmethod
+    def change_color_of_item(item, color: QColor):
+        for i in range(item.columnCount()):
+            item.setBackground(i, color)
+
+
+class BuildingTreeWidget(QtCore.QThread):
+    updated = QtCore.pyqtSignal(int, int)
+    finished = QtCore.pyqtSignal(QFileItem)
+    running = False
+
+    def __init__(self, tree: DiskUsage.File, required_files_count: int):
+        super(BuildingTreeWidget, self).__init__()
+        self.tree = tree
+        self.count = 0
+        self.required_files_count = required_files_count
+
+    def run(self):
+        element = QFileItem(self.tree)
+        element.setSelected(True)
+        element.setExpanded(True)
+        self.display_tree(element, self.tree)
+        self.finished.emit(element)
+
+    def display_tree(self, el, catalog: DiskUsage.File):
+        content = catalog.files + catalog.folders
+        self.count += len(catalog.files) + len(catalog.folders)
+        self.updated.emit(self.count, self.required_files_count)
+        for item in content:
+            tree_item = QFileItem(item)
+            el.addChild(tree_item)
+            if item.extension == '':
+                self.display_tree(tree_item, item)
+
+
+
+
 
 
 if __name__ == '__main__':

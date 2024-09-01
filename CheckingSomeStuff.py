@@ -1,4 +1,5 @@
-from pathlib import Path
-
-file = Path('D:\\Unity\\2022.3.19f1')
-print(file.suffix)
+from os import stat
+import pwd
+def find_owner(filename):
+    return pwd.getpwuid(stat(filename).st_uid).pw_name
+print(find_owner('C:\\Users\\topor\\OneDrive\\Рабочий стол\\check'))
