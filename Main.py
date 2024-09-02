@@ -57,7 +57,7 @@ class MainWindow(QStackedWidget):
         loadUi("ui/diskUsage.ui", self)
         self.processed_disk = ""
         self.connect_combo_boxes()
-        self.filterComboBox.currentTextChanged.connect(self.change_filter_settings)
+        self.filterComboBox.currentTextChanged.connect(self.on_filter_settings_changed)
         self.sortingComboBox.currentTextChanged.connect(self.change_sort_settings)
         self.current_selected_folder = None
         self.startButton.clicked.connect(self.calculate_files_count)
@@ -98,9 +98,7 @@ class MainWindow(QStackedWidget):
     def sort_items(self, item=None):
         sorting_item = item if item else self.current_selected_folder
         if sorting_item.file.grouped:
-            for child in (
-                sorting_item.child(i) for i in range(sorting_item.childCount())
-            ):
+            for child in (sorting_item.child(i) for i in range(sorting_item.childCount())):
                 child.sortChildren(self.sorting_by, self.sorting_order)
         else:
             sorting_item.sortChildren(self.sorting_by, self.sorting_order)
@@ -112,11 +110,11 @@ class MainWindow(QStackedWidget):
             self.sorting_order = Qt.SortOrder.AscendingOrder
         self.sort_items()
 
-    def change_filter_settings(self, filter_settings):
+    def on_filter_settings_changed(self, filter_settings):
         self.filter_settings = "" if filter_settings == Filters.FOLDERS else filter_settings
-        self.filter()
+        self.filter_file_items()
 
-    def filter(self):
+    def filter_file_items(self):
         if self.current_selected_folder.file.grouped:
             self.ungroup()
         if self.filter_settings == Filters.NO_FILTER:
@@ -126,9 +124,7 @@ class MainWindow(QStackedWidget):
             return
         if self.current_selected_folder.file.filtered:
             self.undo_filter()
-        children = self.remove_children_and_temporarily_save_them(
-            self.current_selected_folder
-        )
+        children = self.remove_children_and_temporarily_save_them(self.current_selected_folder)
         for child in children:
             if child.file.extension == self.filter_settings:
                 self.current_selected_folder.addChild(child)
@@ -251,7 +247,8 @@ class MainWindow(QStackedWidget):
 
     def ungroup(self):
         temp = []
-        for child in (self.current_selected_folder.child(i) for i in reversed(range(self.current_selected_folder.childCount()))):
+        for child in (self.current_selected_folder.child(i)
+                      for i in reversed(range(self.current_selected_folder.childCount()))):
             for group_child in (child.child(k) for k in reversed(range(child.childCount()))):
                 temp.append(group_child)
                 child.removeChild(group_child)
@@ -419,8 +416,8 @@ class MainWindow(QStackedWidget):
                 else:
                     child.setSelected(False)
 
-    def on_group_clicked(self, slice: QPieSlice):
-        file_name = slice.label()
+    def on_group_clicked(self, pie_slice: QPieSlice):
+        file_name = pie_slice.label()
         for child in (self.current_selected_group.child(i) for i in range(self.current_selected_group.childCount())):
             if file_name == child.file.name:
                 child.setSelected(True)
