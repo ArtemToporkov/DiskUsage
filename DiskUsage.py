@@ -1,12 +1,12 @@
-import os, datetime
-import xml.etree.ElementTree as ET
-from PyQt5.QtChart import QChartView
+import datetime
+import os
 import time
+
 import PyQt5
-from PyQt5 import QtCore
-import win32security
-import win32api
 import pywintypes
+import win32api
+import win32security
+from PyQt5 import QtCore
 
 
 class File:
@@ -30,8 +30,8 @@ class File:
             self.location = path
             self.creation_date = None
             self.change_date = None
-            self.extension = 'protected system file'
-            self.owner = '???'
+            self.extension = "protected system file"
+            self.owner = "???"
             self.size = 0
             self.files = []
             self.folders = []
@@ -45,23 +45,25 @@ class File:
 
     @staticmethod
     def get_file_extension(path):
-        return os.path.splitext(path)[1] if os.path.isfile(path) else ''
+        return os.path.splitext(path)[1] if os.path.isfile(path) else ""
 
     @staticmethod
     def get_catalog_name(path):
         name = os.path.basename(path)
         if not name:
-            return path.split(':')[0]
+            return path.split(":")[0]
         return name
 
     @staticmethod
     def get_owner(path):
         try:
-            sid = win32security.GetFileSecurity(path, win32security.OWNER_SECURITY_INFORMATION).GetSecurityDescriptorOwner()
+            sid = win32security.GetFileSecurity(
+                path, win32security.OWNER_SECURITY_INFORMATION
+            ).GetSecurityDescriptorOwner()
             owner = win32security.LookupAccountSid(None, sid)[0]
             return owner
         except pywintypes.error:
-            return '??? (access denied)'
+            return "??? (access denied)"
 
 
 class CalculatingFilesCount(QtCore.QThread):
@@ -161,6 +163,3 @@ class UpdatingFoldersSize(QtCore.QThread):
 
     def stop(self):
         self.running = False
-
-
-
