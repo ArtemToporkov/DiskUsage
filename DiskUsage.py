@@ -24,6 +24,7 @@ class File:
             self.parents = []
             self.children = []
             self.grouped = False
+            self.filtered = False
         except FileNotFoundError:
             self.name = os.path.basename(path)
             self.location = path
@@ -37,6 +38,7 @@ class File:
             self.parents = []
             self.children = []
             self.grouped = False
+            self.filtered = False
 
     def is_file(self):
         return os.path.isfile(self.location)

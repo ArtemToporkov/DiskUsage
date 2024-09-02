@@ -23,7 +23,7 @@
    <string notr="true">background-color: rgb(255, 239, 232);</string>
   </property>
   <property name="currentIndex">
-   <number>2</number>
+   <number>0</number>
   </property>
   <widget class="QWidget" name="page_1">
    <property name="sizePolicy">
@@ -920,59 +920,32 @@ border-radius: 15px;</string>
           </widget>
          </item>
          <item>
-          <widget class="QCheckBox" name="descendingCheckBox">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="font">
-            <font>
-             <family>Montserrat Medium</family>
-            </font>
-           </property>
-           <property name="styleSheet">
-            <string notr="true">QCheckBox::indicator:checked {
-	background-color: rgb(255, 186, 158);
-	border-radius: 5px;
-}
-
-QCheckBox::indicator:unchecked {
-	border-radius: 5px;
-	border: 2px solid #ffba9e;
-}</string>
-           </property>
-           <property name="text">
-            <string>by descending</string>
-           </property>
-           <property name="checked">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QCheckBox" name="ascendingCheckBox">
-           <property name="font">
-            <font>
-             <family>Montserrat Medium</family>
-            </font>
-           </property>
-           <property name="styleSheet">
-            <string notr="true">QCheckBox::indicator:checked {
-	background-color: rgb(255, 186, 158);
-	border-radius: 5px;
-}
-
-QCheckBox::indicator:unchecked {
-	border-radius: 5px;
-	border: 2px solid #ffba9e;
-}</string>
-           </property>
-           <property name="text">
-            <string>by ascending</string>
-           </property>
-          </widget>
+          <layout class="QHBoxLayout" name="orderCheckBoxes">
+           <item>
+            <widget class="QRadioButton" name="radioButton_2">
+             <property name="font">
+              <font>
+               <family>Montserrat Medium</family>
+              </font>
+             </property>
+             <property name="text">
+              <string>descending</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QRadioButton" name="radioButton">
+             <property name="font">
+              <font>
+               <family>Montserrat Medium</family>
+              </font>
+             </property>
+             <property name="text">
+              <string>ascending</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
          </item>
         </layout>
        </widget>

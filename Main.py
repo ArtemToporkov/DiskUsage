@@ -15,29 +15,7 @@ from enum import StrEnum
 import downArrow
 import math
 from datetime import datetime, timedelta
-
-class Styles(StrEnum):
-    BUTTON_STYLE_SHEET = '''QPushButton {
-    background-color: rgb(255, 255, 255);
-    border-style: solid;
-    border-radius: 15px;
-    }
-
-    QPushButton:hover {
-    background-color: rgb(255, 246, 242);
-    }'''
-    SELECTED_BUTTON_STYLE_SHEET = '''QPushButton {
-    background-color: rgb(255, 186, 158); 
-    border-style: solid;
-    border-radius: 15px;
-    }
-    
-    QPushButton:hover {
-    background-color: rgb(255, 200, 179);
-    }'''
-    GROUP_STYLE = '''QTreeWidgetItem {
-        background-color: rgb(255, 239, 232);
-    }'''
+from Enums import *
 
 
 class QFileItem(QTreeWidgetItem):
@@ -60,6 +38,18 @@ class QFileItem(QTreeWidgetItem):
         super().__init__(info)
         self.file = file
 
+    def __lt__(self, other):
+        column = self.treeWidget().sortColumn()
+        match column:
+            case TreeWidgetColumns.FILE_OR_FOLDER_NAME:
+                return self.file.name < other.file.name
+            case TreeWidgetColumns.SIZE:
+                return self.file.size < other.file.size
+            case TreeWidgetColumns.CREATION_DATE:
+                return self.file.creation_date < other.file.creation_date
+            case TreeWidgetColumns.CHANGE_DATE:
+                return self.file.change_date < other.file.change_date
+
 
 class MainWindow(QStackedWidget):
     def __init__(self):
@@ -67,6 +57,8 @@ class MainWindow(QStackedWidget):
         loadUi('ui/diskUsage.ui', self)
         self.processed_disk = ''
         self.connect_combo_boxes()
+        self.filterComboBox.currentTextChanged.connect(self.change_filter_settings)
+        self.sortingComboBox.currentTextChanged.connect(self.change_sort_settings)
         self.current_selected_folder = None
         self.startButton.clicked.connect(self.calculate_files_count)
         self.filesTreeWidget.header().resizeSection(0, 300)
@@ -75,6 +67,13 @@ class MainWindow(QStackedWidget):
         self.filesTreeWidget.itemClicked.connect(partial(self.on_selection_new_item, None))
         self.chart.setRenderHint(QPainter.Antialiasing)
         self.customPathEdit.textChanged.connect(self.on_text_changed)
+        self.filter_settings = Filters.NO_FILTER
+        self.group_settings = Grouping.NO_GROUPING
+        self.sorting_order = Qt.SortOrder.DescendingOrder
+        self.sorting_by = TreeWidgetColumns.FILE_OR_FOLDER_NAME
+        self.descendingRadioButton.toggled.connect(self.on_order_radiobutton_toggled)
+        self.filesTreeWidget.setSortingEnabled(True)
+        self.filtered_items = []
         for disk in self.get_disks():
             disk_button = QPushButton(disk)
             disk_button.setFixedHeight(80)
@@ -84,18 +83,78 @@ class MainWindow(QStackedWidget):
             disk_button.clicked.connect(partial(self.set_directory, disk_button))
             self.disksLayout.addWidget(disk_button)
 
+    def change_sort_settings(self, sort_settings):
+        match sort_settings:
+            case 'name':
+                self.sorting_by = TreeWidgetColumns.FILE_OR_FOLDER_NAME
+            case 'size':
+                self.sorting_by = TreeWidgetColumns.SIZE
+            case 'creation date':
+                self.sorting_by = TreeWidgetColumns.CREATION_DATE
+            case 'change date':
+                self.sorting_by = TreeWidgetColumns.CHANGE_DATE
+        self.sort_items()
+
+    def sort_items(self, item=None):
+        sorting_item = item if item else self.current_selected_folder
+        print(self.sorting_by)
+        if sorting_item.file.grouped:
+            for child in (sorting_item.child(i) for i in range(sorting_item.childCount())):
+                child.sortChildren(self.sorting_by, self.sorting_order)
+        else:
+            sorting_item.sortChildren(self.sorting_by, self.sorting_order)
+
+    def on_order_radiobutton_toggled(self):
+        if self.descendingRadioButton.isChecked():
+            self.sorting_order = Qt.SortOrder.DescendingOrder
+        else:
+            self.sorting_order = Qt.SortOrder.AscendingOrder
+        self.sort_items()
+
+    def change_filter_settings(self, filter_settings):
+        self.filter_settings = '' if filter_settings == Filters.FOLDERS else filter_settings
+        self.filter()
+
+    def filter(self):
+        if self.current_selected_folder.file.grouped:
+            self.ungroup()
+        if self.filter_settings == Filters.NO_FILTER:
+            if self.current_selected_folder.file.filtered:
+                self.undo_filter()
+            self.set_groups(self.group_settings)
+            return
+        if self.current_selected_folder.file.filtered:
+            self.undo_filter()
+        children = self.remove_children_and_temporarily_save_them(self.current_selected_folder)
+        for child in children:
+            if child.file.extension == self.filter_settings:
+                self.current_selected_folder.addChild(child)
+            else:
+                self.filtered_items.append(child)
+        self.set_groups(self.group_settings)
+        self.current_selected_folder.file.filtered = True
+        self.sort_items()
+
+    def undo_filter(self):
+        for filtered_item in self.filtered_items:
+            self.current_selected_folder.addChild(filtered_item)
+        self.filtered_items.clear()
+        self.current_selected_folder.file.filtered = False
+        self.sort_items()
+
     def connect_combo_boxes(self):
         self.groupingComboBox.currentTextChanged.connect(self.set_groups)
 
     def set_groups(self, group):
+        self.group_settings = group
         if self.current_selected_folder.file.grouped:
             self.ungroup()
         match group:
-            case 'name':
+            case Grouping.NAME:
                 self.group_by([('A-H', 'a', 'h'), ('I-P', 'i', 'p'), ('Q-Z', 'q', 'z')],
                               lambda file_item: file_item.file.name[0].lower(),
                               lambda file_item: not file_item.file.name[0].isalpha())
-            case 'size':
+            case Grouping.SIZE:
                 self.group_by([('huge (more than 10 gb)', 10737418240, math.inf),
                                ('large (1 - 10 gb)', 1073741824, 10737418239),
                                ('big (257-1023 mb)', 269484032, 1073741823),
@@ -105,22 +164,23 @@ class MainWindow(QStackedWidget):
                                ('no size', 0, 0)],
                               lambda file_item: file_item.file.size,
                               lambda file_item: False)
-            case 'extension':
+            case Grouping.EXTENSION:
                 self.group_by_specific_data(lambda item: item.file.extension,
                                             lambda item: not item.file.extension)
-            case 'owner':
+            case Grouping.OWNER:
                 self.group_by_specific_data(lambda item: item.file.owner,
                                             lambda item: not item.file.owner)
-            case 'creation date' | 'change date':
+            case Grouping.CREATION_DATE | Grouping.CHANGE_DATE:
                 today = datetime.today().date()
                 self.group_by([('today', today, today),
                                ('last week', today - timedelta(days=7), today - timedelta(days=1)),
                                ('last month', today - timedelta(days=30), today - timedelta(days=8)),
                                ('this year', today - timedelta(days=365), today - timedelta(days=31)),
                                ('last year', today - timedelta(days=730), today - timedelta(days=366)),
-                               ('waaay too long ago', datetime.min.date(), today - timedelta(days=731))],
+                               ('waaaay too long ago', datetime.min.date(), today - timedelta(days=731))],
                               lambda file_item: self.get_specific_file_date(file_item, group),
                               lambda file_item: not self.get_specific_file_date(file_item, group))
+        self.sort_items()
 
     def group_by_specific_data(self, get_specific_data: callable, function_for_other: callable):
         data = set()
@@ -252,6 +312,7 @@ class MainWindow(QStackedWidget):
     def on_selection_new_item(self, item):
         self.update_chart(item)
         self.update_filters(item)
+        self.sort_items(item)
 
     def update_chart(self, item):
         self.current_selected_folder = self.filesTreeWidget.currentItem()
@@ -271,8 +332,9 @@ class MainWindow(QStackedWidget):
         series.clicked.connect(self.on_clicked)
 
     def update_filters(self, item=None):
-        self.filterComboBox.clear()
-        self.filterComboBox.addItem('no filter')
+        self.filterComboBox.setCurrentIndex(0)
+        for i in reversed(range(1, self.filterComboBox.count())):
+            self.filterComboBox.removeItem(i)
         selected_item = self.current_selected_folder if not item else item
         extensions = set()
         extensions = {file.extension for file in selected_item.file.files}
@@ -290,8 +352,6 @@ class MainWindow(QStackedWidget):
 
     def on_clicked(self, slice: QPieSlice):
         file_name = slice.label().title().lower()
-        print(file_name)
-        print(type(self.current_selected_folder))
         for child in (self.current_selected_folder.child(i) for i in range(self.current_selected_folder.childCount())):
             if file_name == child.file.name.lower():
                 child.setSelected(True)
@@ -339,10 +399,6 @@ class BuildingTreeWidget(QtCore.QThread):
             el.addChild(tree_item)
             if item.extension == '':
                 self.display_tree(tree_item, item)
-
-
-
-
 
 
 if __name__ == '__main__':
