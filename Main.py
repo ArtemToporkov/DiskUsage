@@ -98,7 +98,7 @@ class MainWindow(QStackedWidget):
     def sort_items(self, item=None):
         sorting_item = item if item else self.current_selected_folder
         if sorting_item.file.grouped:
-            for child in (sorting_item.child(i) for i in range(sorting_item.childCount())):
+            for child in self.get_children(sorting_item):
                 child.sortChildren(self.sorting_by, self.sorting_order)
         else:
             sorting_item.sortChildren(self.sorting_by, self.sorting_order)
@@ -195,10 +195,7 @@ class MainWindow(QStackedWidget):
 
     def group_by_specific_data(self, get_specific_data: callable, function_for_other: callable):
         data = set()
-        for child in (
-            self.current_selected_folder.child(i)
-            for i in range(self.current_selected_folder.childCount())
-        ):
+        for child in self.get_children(self.current_selected_folder):
             data_piece = get_specific_data(child)
             if data_piece:
                 data.add(data_piece)
@@ -215,14 +212,6 @@ class MainWindow(QStackedWidget):
             if date_name == "creation date"
             else item.file.change_date.date()
         )
-
-    @staticmethod
-    def remove_children_and_temporarily_save_them(item):
-        temp = []
-        for child in (item.child(i) for i in reversed(range(item.childCount()))):
-            temp.append(child)
-            item.removeChild(child)
-        return temp
 
     def group_by(self, groups: list[tuple], comparison_function: callable, function_for_other: callable):
         temp = self.remove_children_and_temporarily_save_them(self.current_selected_folder)
@@ -247,9 +236,8 @@ class MainWindow(QStackedWidget):
 
     def ungroup(self):
         temp = []
-        for child in (self.current_selected_folder.child(i)
-                      for i in reversed(range(self.current_selected_folder.childCount()))):
-            for group_child in (child.child(k) for k in reversed(range(child.childCount()))):
+        for child in self.get_children(self.current_selected_folder, reversed_flag=True):
+            for group_child in self.get_children(child, reversed_flag=True):
                 temp.append(group_child)
                 child.removeChild(group_child)
             self.current_selected_folder.removeChild(child)
@@ -354,7 +342,7 @@ class MainWindow(QStackedWidget):
         self.filterWidget.setEnabled(False)
         series = QPieSeries()
         series.setPieSize(0.5)
-        for child in (item.child(i) for i in range(item.childCount())):
+        for child in self.get_children(item):
             if child.file.size > 0:
                 series.append(child.file.name, child.file.size)
         chart = QChart()
@@ -403,14 +391,14 @@ class MainWindow(QStackedWidget):
     def on_clicked(self, slice: QPieSlice):
         file_name = slice.label()
         if self.current_selected_folder.file.grouped:
-            for group in (self.current_selected_folder.child(i) for i in range(self.current_selected_folder.childCount())):
-                for child in (group.child(j) for j in range(group.childCount())):
+            for group in self.get_children(self.current_selected_folder):
+                for child in self.get_children(group):
                     if child.file.name == file_name:
                         child.setSelected(True)
                     else:
                         child.setSelected(False)
         else:
-            for child in (self.current_selected_folder.child(i) for i in range(self.current_selected_folder.childCount())):
+            for child in self.get_children(self.current_selected_folder):
                 if file_name == child.file.name:
                     child.setSelected(True)
                 else:
@@ -418,11 +406,19 @@ class MainWindow(QStackedWidget):
 
     def on_group_clicked(self, pie_slice: QPieSlice):
         file_name = pie_slice.label()
-        for child in (self.current_selected_group.child(i) for i in range(self.current_selected_group.childCount())):
+        for child in self.get_children(self.current_selected_group):
             if file_name == child.file.name:
                 child.setSelected(True)
             else:
                 child.setSelected(False)
+
+    @staticmethod
+    def remove_children_and_temporarily_save_them(item):
+        temp = []
+        for child in MainWindow.get_children(item, reversed_flag=True):
+            temp.append(child)
+            item.removeChild(child)
+        return temp
 
     @staticmethod
     def get_disks():
@@ -435,6 +431,15 @@ class MainWindow(QStackedWidget):
     def change_color_of_item(item, color: QColor):
         for i in range(item.columnCount()):
             item.setBackground(i, color)
+
+    @staticmethod
+    def get_children(item, reversed_flag=False):
+        if not reversed_flag:
+            for child in (item.child(i) for i in range(item.childCount())):
+                yield child
+        else:
+            for child in (item.child(i) for i in reversed(range(item.childCount()))):
+                yield child
 
 
 class BuildingTreeWidget(QtCore.QThread):
