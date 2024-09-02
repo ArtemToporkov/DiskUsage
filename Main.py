@@ -64,7 +64,7 @@ class MainWindow(QStackedWidget):
         self.filesTreeWidget.header().resizeSection(0, 300)
         self.filesTreeWidget.header().resizeSection(1, 50)
         self.filesTreeWidget.header().resizeSection(4, 100)
-        self.filesTreeWidget.itemClicked.connect(partial(self.on_selection_new_item, None))
+        self.filesTreeWidget.itemClicked.connect(self.on_selection_new_item)
         self.chart.setRenderHint(QPainter.Antialiasing)
         self.customPathEdit.textChanged.connect(self.on_text_changed)
         self.filter_settings = Filters.NO_FILTER
@@ -72,7 +72,7 @@ class MainWindow(QStackedWidget):
         self.sorting_order = Qt.SortOrder.DescendingOrder
         self.sorting_by = TreeWidgetColumns.FILE_OR_FOLDER_NAME
         self.descendingRadioButton.toggled.connect(self.on_order_radiobutton_toggled)
-        self.filesTreeWidget.setSortingEnabled(True)
+        self.current_selected_group = None
         self.filtered_items = []
         for disk in self.get_disks():
             disk_button = QPushButton(disk)
@@ -97,7 +97,6 @@ class MainWindow(QStackedWidget):
 
     def sort_items(self, item=None):
         sorting_item = item if item else self.current_selected_folder
-        print(self.sorting_by)
         if sorting_item.file.grouped:
             for child in (sorting_item.child(i) for i in range(sorting_item.childCount())):
                 child.sortChildren(self.sorting_by, self.sorting_order)
@@ -238,9 +237,6 @@ class MainWindow(QStackedWidget):
         self.current_selected_folder.file.grouped = False
 
     def set_directory(self, disk_button):
-        print(self.size())
-        print(self.startButton.size())
-        print(self.currentWidget())
         self.processed_disk = disk_button.text() + ':\\'
         disk_button.setStyleSheet(Styles.SELECTED_BUTTON_STYLE_SHEET)
         for button in (self.disksLayout.itemAt(i).widget() for i in range(self.disksLayout.count())):
@@ -295,8 +291,8 @@ class MainWindow(QStackedWidget):
         self.filesTreeWidget.addTopLevelItem(element)
         element.setExpanded(True)
         element.setSelected(True)
-        self.on_selection_new_item(element)
         self.current_selected_folder = element
+        self.on_selection_new_item(element)
         self.setCurrentIndex(2)
 
     def on_update(self, count, req_count):
@@ -310,13 +306,44 @@ class MainWindow(QStackedWidget):
             button.setStyleSheet(Styles.BUTTON_STYLE_SHEET)
 
     def on_selection_new_item(self, item):
-        self.update_chart(item)
-        self.update_filters(item)
-        self.sort_items(item)
+        if type(item) == QTreeWidgetItem:
+            self.on_group_selected(item)
+        else:
+            self.on_file_selected(item)
 
-    def update_chart(self, item):
+    def on_file_selected(self, item):
+        self.groupWidget.setEnabled(True)
+        if item.file.extension != '':
+            return
+        if self.current_selected_folder.file.grouped:
+            self.ungroup()
+        self.filesTreeWidget.setCurrentItem(item)
+        item.setExpanded(True)
         self.current_selected_folder = self.filesTreeWidget.currentItem()
-        file = self.current_selected_folder.file if item is None else item.file
+        self.update_chart()
+        self.update_filters()
+        self.sort_items()
+        self.set_groups(self.group_settings)
+
+    def on_group_selected(self, item):
+        self.current_selected_group = item
+        self.groupWidget.setEnabled(False)
+        series = QPieSeries()
+        series.setPieSize(0.5)
+        for child in (item.child(i) for i in range(item.childCount())):
+            if child.file.size > 0:
+                series.append(child.file.name, child.file.size)
+        chart = QChart()
+        chart = QChart()
+        chart.setAnimationOptions(QChart.SeriesAnimations)
+        chart.addSeries(series)
+        self.chart.setChart(chart)
+        series.hovered.connect(self.on_hovered)
+        series.clicked.connect(self.on_group_clicked)
+
+
+    def update_chart(self):
+        file = self.current_selected_folder.file
         if file.extension != '':
             return
         series = QPieSeries()
@@ -351,12 +378,21 @@ class MainWindow(QStackedWidget):
             slice.setLabelVisible(False)
 
     def on_clicked(self, slice: QPieSlice):
-        file_name = slice.label().title().lower()
+        file_name = slice.label()
         for child in (self.current_selected_folder.child(i) for i in range(self.current_selected_folder.childCount())):
-            if file_name == child.file.name.lower():
+            if file_name == child.file.name:
                 child.setSelected(True)
             else:
                 child.setSelected(False)
+
+    def on_group_clicked(self, slice: QPieSlice):
+        file_name = slice.label()
+        for child in (self.current_selected_group.child(i) for i in range(self.current_selected_group.childCount())):
+            if file_name == child.file.name:
+                child.setSelected(True)
+            else:
+                child.setSelected(False)
+
 
 
     @staticmethod
