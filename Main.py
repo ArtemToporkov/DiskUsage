@@ -55,23 +55,17 @@ class MainWindow(QStackedWidget):
     def __init__(self):
         super(MainWindow, self).__init__()
         loadUi("ui/diskUsage.ui", self)
+        self.connect_functions()
         self.processed_disk = ""
-        self.connect_combo_boxes()
-        self.filterComboBox.currentTextChanged.connect(self.on_filter_settings_changed)
-        self.sortingComboBox.currentTextChanged.connect(self.change_sort_settings)
         self.current_selected_folder = None
-        self.startButton.clicked.connect(self.calculate_files_count)
         self.filesTreeWidget.header().resizeSection(0, 300)
         self.filesTreeWidget.header().resizeSection(1, 50)
         self.filesTreeWidget.header().resizeSection(4, 100)
-        self.filesTreeWidget.itemClicked.connect(self.on_selection_new_item)
         self.chart.setRenderHint(QPainter.Antialiasing)
-        self.customPathEdit.textChanged.connect(self.on_text_changed)
         self.filter_settings = Filters.NO_FILTER
         self.group_settings = Grouping.NO_GROUPING
         self.sorting_order = Qt.SortOrder.DescendingOrder
         self.sorting_by = TreeWidgetColumns.FILE_OR_FOLDER_NAME
-        self.descendingRadioButton.toggled.connect(self.on_order_radiobutton_toggled)
         self.current_selected_group = None
         self.filtered_items = []
         for disk in self.get_disks():
@@ -82,6 +76,16 @@ class MainWindow(QStackedWidget):
             disk_button.setFont(QFont("Montserrat bold", 20))
             disk_button.clicked.connect(partial(self.set_directory, disk_button))
             self.disksLayout.addWidget(disk_button)
+
+    def connect_functions(self):
+        self.groupingComboBox.currentTextChanged.connect(self.set_groups)
+        self.filterComboBox.currentTextChanged.connect(self.on_filter_settings_changed)
+        self.sortingComboBox.currentTextChanged.connect(self.change_sort_settings)
+        self.startButton.clicked.connect(self.calculate_files_count)
+        self.filesTreeWidget.itemClicked.connect(self.on_selection_new_item)
+        self.customPathEdit.textChanged.connect(self.on_text_changed)
+        self.descendingRadioButton.toggled.connect(self.on_order_radiobutton_toggled)
+
 
     def change_sort_settings(self, sort_settings):
         match sort_settings:
@@ -140,9 +144,6 @@ class MainWindow(QStackedWidget):
         self.filtered_items.clear()
         self.current_selected_folder.file.filtered = False
         self.sort_items()
-
-    def connect_combo_boxes(self):
-        self.groupingComboBox.currentTextChanged.connect(self.set_groups)
 
     def set_groups(self, group):
         self.group_settings = group
