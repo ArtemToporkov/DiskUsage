@@ -306,17 +306,20 @@ class MainWindow(QStackedWidget):
             button.setStyleSheet(Styles.BUTTON_STYLE_SHEET)
 
     def on_selection_new_item(self, item):
-        if type(item) == QTreeWidgetItem:
+        if type(item) is QTreeWidgetItem:
             self.on_group_selected(item)
         else:
             self.on_file_selected(item)
 
     def on_file_selected(self, item):
         self.groupWidget.setEnabled(True)
+        self.filterWidget.setEnabled(True)
         if item.file.extension != '':
             return
         if self.current_selected_folder.file.grouped:
             self.ungroup()
+        if self.current_selected_folder.file.filtered:
+            self.undo_filter()
         self.filesTreeWidget.setCurrentItem(item)
         item.setExpanded(True)
         self.current_selected_folder = self.filesTreeWidget.currentItem()
@@ -328,6 +331,7 @@ class MainWindow(QStackedWidget):
     def on_group_selected(self, item):
         self.current_selected_group = item
         self.groupWidget.setEnabled(False)
+        self.filterWidget.setEnabled(False)
         series = QPieSeries()
         series.setPieSize(0.5)
         for child in (item.child(i) for i in range(item.childCount())):
@@ -340,7 +344,6 @@ class MainWindow(QStackedWidget):
         self.chart.setChart(chart)
         series.hovered.connect(self.on_hovered)
         series.clicked.connect(self.on_group_clicked)
-
 
     def update_chart(self):
         file = self.current_selected_folder.file
@@ -379,11 +382,19 @@ class MainWindow(QStackedWidget):
 
     def on_clicked(self, slice: QPieSlice):
         file_name = slice.label()
-        for child in (self.current_selected_folder.child(i) for i in range(self.current_selected_folder.childCount())):
-            if file_name == child.file.name:
-                child.setSelected(True)
-            else:
-                child.setSelected(False)
+        if self.current_selected_folder.file.grouped:
+            for group in (self.current_selected_folder.child(i) for i in range(self.current_selected_folder.childCount())):
+                for child in (group.child(j) for j in range(group.childCount())):
+                    if child.file.name == file_name:
+                        child.setSelected(True)
+                    else:
+                        child.setSelected(False)
+        else:
+            for child in (self.current_selected_folder.child(i) for i in range(self.current_selected_folder.childCount())):
+                if file_name == child.file.name:
+                    child.setSelected(True)
+                else:
+                    child.setSelected(False)
 
     def on_group_clicked(self, slice: QPieSlice):
         file_name = slice.label()

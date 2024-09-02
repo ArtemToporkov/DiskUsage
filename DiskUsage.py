@@ -61,7 +61,7 @@ class File:
             owner = win32security.LookupAccountSid(None, sid)[0]
             return owner
         except pywintypes.error:
-            return 'Access denied.'
+            return '??? (access denied)'
 
 
 class CalculatingFilesCount(QtCore.QThread):
