@@ -5,8 +5,9 @@ from PyQt5.QtCore import Qt
 
 import main
 from main import MainWindow, QFileItem
-from enums import TreeWidgetColumns, Grouping, Filters, Sorting
+from enums import TreeWidgetColumns, Grouping, Filters
 from disk_usage import File
+
 
 class TestMainWindow(unittest.TestCase):
 
@@ -158,7 +159,7 @@ class TestMainWindow(unittest.TestCase):
 
     def test_on_update(self):
         self.main_window.on_update(5, 10)
-        self.assertEqual(self.main_window.progressBar.format(), "50% (5/10 files processed)")
+        self.assertEqual(self.main_window.progressBar.format(), "50% (5/10 )")
 
     def test_on_text_changed(self):
         self.main_window.customPathEdit.setText("C:\\")

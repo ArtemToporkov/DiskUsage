@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 from disk_usage import File, CalculatingFilesCount, CalculatingMemoryUsage, UpdatingFoldersSize
 
+
 class TestDiskUsage(unittest.TestCase):
 
     def test_file_init(self):

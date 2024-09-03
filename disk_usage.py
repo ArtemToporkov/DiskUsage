@@ -7,6 +7,7 @@ import pywintypes
 import win32api
 import win32security
 from PyQt5 import QtCore
+from pathlib import Path
 
 
 class File:
@@ -128,8 +129,6 @@ class CalculatingMemoryUsage(QtCore.QThread):
         start_time = time.time()
         self.tree = File(self.disk)
         self.fill_disk_usage(self.disk, self.tree)
-        print("--- %s seconds ---" % (time.time() - start_time))
-        print(self.count, self.required_count)
         return self.tree
 
     def stop(self):
