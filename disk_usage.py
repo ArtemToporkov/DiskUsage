@@ -69,6 +69,7 @@ class File:
 class CalculatingFilesCount(QtCore.QThread):
     finished = QtCore.pyqtSignal(int)
     updated = QtCore.pyqtSignal(int)
+    result = 0
 
     def __init__(self, disk):
         super(CalculatingFilesCount, self).__init__()
@@ -76,6 +77,7 @@ class CalculatingFilesCount(QtCore.QThread):
 
     def run(self):
         count = self.get_files_count(self.disk)
+        self.result = count
         self.finished.emit(count)
 
     def get_files_count(self, directory):

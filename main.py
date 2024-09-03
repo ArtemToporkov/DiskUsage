@@ -1,5 +1,7 @@
 import math
+import os
 import sys
+import time
 from datetime import datetime, timedelta
 from functools import partial
 
@@ -12,16 +14,16 @@ from PyQt5.QtWidgets import (QApplication, QDialog, QMainWindow, QPushButton,
                              QSizePolicy, QStackedWidget, QTreeWidgetItem)
 from PyQt5.uic import loadUi
 
-import DiskUsage
-import downArrow
-from Enums import *
+import disk_usage
+import down_arrow
+from enums import *
 
 
 class QFileItem(QTreeWidgetItem):
-    def __init__(self, file: DiskUsage.File):
+    def __init__(self, file: disk_usage.File):
         info = [
             file.name,
-            str(file.size),
+            self.convert_bytes(file.size),
             (
                 file.creation_date.strftime("%H:%M:%S %d.%m.%y")
                 if file.extension != "protected system file"
@@ -50,32 +52,41 @@ class QFileItem(QTreeWidgetItem):
             case TreeWidgetColumns.CHANGE_DATE:
                 return self.file.change_date < other.file.change_date
 
+    @staticmethod
+    def convert_bytes(size) -> str:
+        if size < 1024:
+            return f"{size} b"
+        elif 1024 <= size < 1024 ** 2:
+            return f"{round(size / 1024, 1)} kb"
+        elif 1024 ** 2 <= size < 1024 ** 3:
+            return f"{round(size / 1024 ** 2, 1)} mb"
+        else:
+            return f"{round(size / 1024 ** 3, 1)} gb"
+
+
+
 
 class MainWindow(QStackedWidget):
     def __init__(self):
         super(MainWindow, self).__init__()
-        loadUi("ui/diskUsage.ui", self)
+        loadUi("D:\\DiskUsage\\DiskUsage\\ui\\diskUsage.ui", self)
         self.connect_functions()
+        self.resize_tree_sections()
+
         self.processed_disk = ""
+
         self.current_selected_folder = None
-        self.filesTreeWidget.header().resizeSection(0, 300)
-        self.filesTreeWidget.header().resizeSection(1, 50)
-        self.filesTreeWidget.header().resizeSection(4, 100)
+        self.current_selected_group = None
+        self.filtered_items = []
+
         self.chart.setRenderHint(QPainter.Antialiasing)
+
         self.filter_settings = Filters.NO_FILTER
         self.group_settings = Grouping.NO_GROUPING
         self.sorting_order = Qt.SortOrder.DescendingOrder
         self.sorting_by = TreeWidgetColumns.FILE_OR_FOLDER_NAME
-        self.current_selected_group = None
-        self.filtered_items = []
-        for disk in self.get_disks():
-            disk_button = QPushButton(disk)
-            disk_button.setFixedHeight(80)
-            disk_button.setStyleSheet(Styles.BUTTON_STYLE_SHEET)
-            disk_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-            disk_button.setFont(QFont("Montserrat bold", 20))
-            disk_button.clicked.connect(partial(self.set_directory, disk_button))
-            self.disksLayout.addWidget(disk_button)
+
+        self.add_disk_buttons()
 
     def connect_functions(self):
         self.groupingComboBox.currentTextChanged.connect(self.set_groups)
@@ -86,6 +97,21 @@ class MainWindow(QStackedWidget):
         self.customPathEdit.textChanged.connect(self.on_text_changed)
         self.descendingRadioButton.toggled.connect(self.on_order_radiobutton_toggled)
 
+    def resize_tree_sections(self):
+        self.filesTreeWidget.header().resizeSection(0, 300)
+        self.filesTreeWidget.header().resizeSection(1, 50)
+        self.filesTreeWidget.header().resizeSection(4, 100)
+
+    def add_disk_buttons(self):
+        for disk in self.get_disks():
+            disk_button = QPushButton(disk)
+            disk_button.setFixedHeight(80)
+            disk_button.setStyleSheet(Styles.BUTTON_STYLE_SHEET)
+            disk_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+            disk_button.setFont(QFont("Montserrat bold", 20))
+            disk_button.clicked.connect(partial(self.set_directory, disk_button))
+            self.disksLayout.addWidget(disk_button)
+        print(self.disksLayout.count())
 
     def change_sort_settings(self, sort_settings):
         match sort_settings:
@@ -260,7 +286,7 @@ class MainWindow(QStackedWidget):
         movie.start()
         if self.customPathEdit.text():
             self.processed_disk = self.customPathEdit.text()
-        self.calculating_task = DiskUsage.CalculatingFilesCount(self.processed_disk)
+        self.calculating_task = disk_usage.CalculatingFilesCount(self.processed_disk)
         self.calculating_task.finished.connect(self.start_preparing_files_on_calculating_files_count_finished)
         self.calculating_task.updated.connect(self.on_preparing)
         self.progressBar.setValue(0)
@@ -270,25 +296,25 @@ class MainWindow(QStackedWidget):
         self.progressBar.setFormat(f"{prepared_files_count} files found...")
 
     def start_preparing_files_on_calculating_files_count_finished(self, required_files_count):
-        movie = QMovie(f'assets/gifs/preparing files.gif')
+        movie = QMovie(f'assets/gifs/preparing_files.gif')
         self.label_3.setMovie(movie)
         movie.start()
-        self.processing_files_task = DiskUsage.CalculatingMemoryUsage(self.processed_disk, required_files_count)
+        self.processing_files_task = disk_usage.CalculatingMemoryUsage(self.processed_disk, required_files_count)
         self.processing_files_task.updated.connect(self.on_update)
         self.processing_files_task.finished.connect(self.update_files_size_on_preparing_files_finished)
         self.processing_files_task.start()
 
-    def update_files_size_on_preparing_files_finished(self, tree: DiskUsage.File, required_files_count: int):
-        movie = QMovie(f'assets/gifs/updating size.gif')
+    def update_files_size_on_preparing_files_finished(self, tree: disk_usage.File, required_files_count: int):
+        movie = QMovie(f'assets/gifs/updating_size.gif')
         self.label_3.setMovie(movie)
         movie.start()
-        self.updating_size_task = DiskUsage.UpdatingFoldersSize(tree, required_files_count)
+        self.updating_size_task = disk_usage.UpdatingFoldersSize(tree, required_files_count)
         self.updating_size_task.updated.connect(self.on_update)
         self.updating_size_task.finished.connect(self.build_widget_on_size_updating_finished)
         self.updating_size_task.start()
 
-    def build_widget_on_size_updating_finished(self, tree: DiskUsage.File, required_count: int):
-        movie = QMovie(f'assets/gifs/building widget.gif')
+    def build_widget_on_size_updating_finished(self, tree: disk_usage.File, required_count: int):
+        movie = QMovie(f'assets/gifs/building_widget.gif')
         self.label_3.setMovie(movie)
         movie.start()
         self.building_widget_task = BuildingTreeWidget(tree, required_count)
@@ -366,6 +392,7 @@ class MainWindow(QStackedWidget):
         chart = QChart()
         chart.setAnimationOptions(QChart.SeriesAnimations)
         chart.addSeries(series)
+        chart.legend().hide()
         self.chart.setChart(chart)
         series.hovered.connect(self.on_hovered)
         series.clicked.connect(self.on_clicked)
@@ -448,7 +475,7 @@ class BuildingTreeWidget(QtCore.QThread):
     finished = QtCore.pyqtSignal(QFileItem)
     running = False
 
-    def __init__(self, tree: DiskUsage.File, required_files_count: int):
+    def __init__(self, tree: disk_usage.File, required_files_count: int):
         super(BuildingTreeWidget, self).__init__()
         self.tree = tree
         self.count = 0
@@ -461,10 +488,11 @@ class BuildingTreeWidget(QtCore.QThread):
         self.display_tree(element, self.tree)
         self.finished.emit(element)
 
-    def display_tree(self, el, catalog: DiskUsage.File):
+    def display_tree(self, el, catalog: disk_usage.File):
         content = catalog.files + catalog.folders
         self.count += len(catalog.files) + len(catalog.folders)
         self.updated.emit(self.count, self.required_files_count)
+        time.sleep(0.00001)
         for item in content:
             tree_item = QFileItem(item)
             el.addChild(tree_item)
