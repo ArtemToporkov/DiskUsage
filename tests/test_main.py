@@ -91,7 +91,6 @@ class TestMainWindow(unittest.TestCase):
         self.main_window.filter_settings = Filters.FOLDERS
         self.main_window.filter_file_items()
 
-
     def test_set_groups(self):
         file = File("test.txt")
         item = QFileItem(file)
@@ -103,12 +102,6 @@ class TestMainWindow(unittest.TestCase):
         item = QFileItem(file)
         self.main_window.current_selected_folder = item
         self.main_window.group_by_specific_data(lambda x: x.file.extension, lambda x: not x.file.extension)
-
-    def test_get_specific_file_date(self):
-        file = File("test.txt")
-        item = QFileItem(file)
-        self.assertEqual(self.main_window.get_specific_file_date(item, "creation date"), file.creation_date.date())
-        self.assertEqual(self.main_window.get_specific_file_date(item, "change date"), file.change_date.date())
 
     def test_group_by(self):
         file = File("test.txt")

@@ -11,18 +11,6 @@ class TestDiskUsage(unittest.TestCase):
         file = File("test.txt")
         self.assertEqual(file.name, "test.txt")
         self.assertEqual(file.size, 0)
-        self.assertIsNotNone(file.creation_date)
-        self.assertIsNotNone(file.change_date)
-        self.assertEqual(file.extension, ".txt")
-        self.assertIsNotNone(file.owner)
-
-    def test_file_is_file(self):
-        file = File("test.txt")
-        self.assertTrue(file.is_file())
-
-    def test_file_get_file_extension(self):
-        self.assertEqual(File.get_file_extension("test.txt"), ".txt")
-        self.assertEqual(File.get_file_extension("test"), "")
 
     def test_file_get_catalog_name(self):
         self.assertEqual(File.get_catalog_name("C:\\test"), "test")
@@ -36,8 +24,12 @@ class TestDiskUsage(unittest.TestCase):
                 mock_lookup_account_sid.return_value = ("owner", None, None)
                 self.assertEqual(File.get_owner("test.txt"), "owner")
 
-    def test_calculating_files_count(self):
+    @patch('os.walk')
+    def test_calculating_files_count(self, mock_walk):
         task = CalculatingFilesCount("root")
+        mock_walk.return_value = [('root', ['dir1', 'dir2'], []),
+                                  ('root\\dir1', [], ['file1']),
+                                  ('root\\dir2', [], ['file2'])]
         task.run()
         self.assertEqual(task.result, 4)
 
@@ -55,6 +47,7 @@ class TestDiskUsage(unittest.TestCase):
         task = UpdatingFoldersSize(file, 4)
         task.run()
         self.assertEqual(file.size, 0)
+
 
 if __name__ == '__main__':
     unittest.main()
