@@ -1,5 +1,6 @@
 import unittest
-from enums import Styles, Grouping, Sorting, Filters, TreeWidgetColumns
+
+from enums import Filters, Grouping, Sorting, Styles, TreeWidgetColumns
 
 
 class TestEnums(unittest.TestCase):

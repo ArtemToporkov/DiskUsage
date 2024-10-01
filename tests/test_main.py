@@ -1,12 +1,13 @@
 import unittest
 from unittest.mock import MagicMock, patch
-from PyQt5.QtWidgets import QApplication
+
 from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QApplication
 
 import main
-from main import MainWindow, QFileItem
-from enums import TreeWidgetColumns, Grouping, Filters
 from disk_usage import File
+from enums import Filters, Grouping, TreeWidgetColumns
+from main import MainWindow, QFileItem
 
 
 class TestMainWindow(unittest.TestCase):

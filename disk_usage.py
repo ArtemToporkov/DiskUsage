@@ -2,12 +2,9 @@ import datetime
 import os
 import time
 
-import PyQt5
 import pywintypes
-import win32api
 import win32security
 from PyQt5 import QtCore
-from pathlib import Path
 
 
 class File:

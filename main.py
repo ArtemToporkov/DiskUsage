@@ -4,21 +4,19 @@ import sys
 import time
 from datetime import datetime, timedelta
 from functools import partial
+from pathlib import Path
 
 import win32api
 from PyQt5 import QtCore
 from PyQt5.QtChart import QChart, QPieSeries, QPieSlice
 from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QColor, QFont, QMovie, QPainter, QIcon
-from PyQt5.QtWidgets import (QApplication, QPushButton,
-                             QSizePolicy, QStackedWidget, QTreeWidgetItem)
+from PyQt5.QtGui import QColor, QFont, QIcon, QMovie, QPainter
+from PyQt5.QtWidgets import (QApplication, QPushButton, QSizePolicy,
+                             QStackedWidget, QTreeWidgetItem)
 from PyQt5.uic import loadUi
 
 import disk_usage
-import down_arrow
-from enums import *
-
-from pathlib import Path
+from enums import Filters, Grouping, Styles, TreeWidgetColumns
 
 
 class QFileItem(QTreeWidgetItem):
@@ -42,7 +40,7 @@ class QFileItem(QTreeWidgetItem):
         super().__init__(info)
         self.file = file
 
-    def __lt__(self, other):
+    def __lt__(self, other) -> bool:
         column = self.treeWidget().sortColumn()
         match column:
             case TreeWidgetColumns.FILE_OR_FOLDER_NAME:
