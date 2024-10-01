@@ -16,6 +16,7 @@ from PyQt5.QtWidgets import (QApplication, QPushButton, QSizePolicy,
 from PyQt5.uic import loadUi
 
 import disk_usage
+import down_arrow
 from enums import Filters, Grouping, Styles, TreeWidgetColumns
 
 
@@ -416,8 +417,7 @@ class MainWindow(QStackedWidget):
         for i in reversed(range(1, self.filterComboBox.count())):
             self.filterComboBox.removeItem(i)
         selected_item = self.current_selected_folder if not item else item
-        extensions = set()
-        extensions = {file.extension for file in selected_item.file.files}
+        extensions = {file.extension for file in selected_item.file.files if file.extension}
         if selected_item.file.folders:
             extensions.add("folders")
         self.filterComboBox.addItems(extensions)
