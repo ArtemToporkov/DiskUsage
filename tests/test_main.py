@@ -92,7 +92,6 @@ class TestMainWindow(unittest.TestCase):
         self.main_window.filter_settings = Filters.FOLDERS
         self.main_window.filter_file_items()
 
-
     def test_set_groups(self):
         file = File("test.txt")
         item = QFileItem(file)

@@ -44,6 +44,12 @@ class TestDiskUsage(unittest.TestCase):
     def test_calculating_files_count(self):
         path = Path(__file__).parent / "root"
         task = CalculatingFilesCount(path)
+    @patch('os.walk')
+    def test_calculating_files_count(self, mock_walk):
+        task = CalculatingFilesCount("root")
+        mock_walk.return_value = [('root', ['dir1', 'dir2'], []),
+                                  ('root\\dir1', [], ['file1']),
+                                  ('root\\dir2', [], ['file2'])]
         task.run()
         self.assertEqual(task.result, 4)
 
@@ -61,6 +67,7 @@ class TestDiskUsage(unittest.TestCase):
         task = UpdatingFoldersSize(file, 4)
         task.run()
         self.assertEqual(file.size, 0)
+
 
 if __name__ == '__main__':
     unittest.main()
