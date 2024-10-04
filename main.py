@@ -16,7 +16,7 @@ from PyQt5.QtWidgets import (QApplication, QPushButton, QSizePolicy,
 from PyQt5.uic import loadUi
 
 import disk_usage
-import down_arrow
+import down_arrow  # noqa: F401
 from enums import Filters, Grouping, Styles, TreeWidgetColumns
 
 
