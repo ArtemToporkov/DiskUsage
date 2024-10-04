@@ -5,6 +5,8 @@ from unittest.mock import MagicMock, patch
 from disk_usage import (CalculatingFilesCount, CalculatingMemoryUsage, File,
                         UpdatingFoldersSize)
 
+import math
+
 
 class TestDiskUsage(unittest.TestCase):
 
