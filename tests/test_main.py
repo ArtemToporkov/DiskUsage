@@ -1,4 +1,5 @@
 import unittest
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from PyQt5.QtCore import Qt
@@ -105,7 +106,8 @@ class TestMainWindow(unittest.TestCase):
         self.main_window.group_by_specific_data(lambda x: x.file.extension, lambda x: not x.file.extension)
 
     def test_get_specific_file_date(self):
-        file = File("test.txt")
+        path = Path(__file__).parent / "test.txt"
+        file = File(str(path))
         item = QFileItem(file)
         self.assertEqual(self.main_window.get_specific_file_date(item, "creation date"), file.creation_date.date())
         self.assertEqual(self.main_window.get_specific_file_date(item, "change date"), file.change_date.date())

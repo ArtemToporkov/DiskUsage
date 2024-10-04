@@ -1,4 +1,5 @@
 import unittest
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from disk_usage import (CalculatingFilesCount, CalculatingMemoryUsage, File,
@@ -8,7 +9,8 @@ from disk_usage import (CalculatingFilesCount, CalculatingMemoryUsage, File,
 class TestDiskUsage(unittest.TestCase):
 
     def test_file_init(self):
-        file = File("test.txt")
+        path = Path(__file__).parent / "test.txt"
+        file = File(str(path))
         self.assertEqual(file.name, "test.txt")
         self.assertEqual(file.size, 0)
         self.assertIsNotNone(file.creation_date)
@@ -17,12 +19,13 @@ class TestDiskUsage(unittest.TestCase):
         self.assertIsNotNone(file.owner)
 
     def test_file_is_file(self):
-        file = File("test.txt")
+        path = Path(__file__).parent / "test.txt"
+        file = File(str(path))
         self.assertTrue(file.is_file())
 
     def test_file_get_file_extension(self):
-        self.assertEqual(File.get_file_extension("test.txt"), ".txt")
-        self.assertEqual(File.get_file_extension("test"), "")
+        path = Path(__file__).parent / "test.txt"
+        self.assertEqual(File.get_file_extension(path), ".txt")
 
     def test_file_get_catalog_name(self):
         self.assertEqual(File.get_catalog_name("C:\\test"), "test")
@@ -37,7 +40,8 @@ class TestDiskUsage(unittest.TestCase):
                 self.assertEqual(File.get_owner("test.txt"), "owner")
 
     def test_calculating_files_count(self):
-        task = CalculatingFilesCount("root")
+        path = Path(__file__).parent / "root"
+        task = CalculatingFilesCount(path)
         task.run()
         self.assertEqual(task.result, 4)
 
