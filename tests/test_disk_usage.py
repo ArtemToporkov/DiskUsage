@@ -1,16 +1,33 @@
 import unittest
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from disk_usage import (CalculatingFilesCount, CalculatingMemoryUsage, File,
                         UpdatingFoldersSize)
 
+import math
+
 
 class TestDiskUsage(unittest.TestCase):
 
     def test_file_init(self):
-        file = File("test.txt")
+        path = Path(__file__).parent / "test.txt"
+        file = File(str(path))
         self.assertEqual(file.name, "test.txt")
         self.assertEqual(file.size, 0)
+        self.assertIsNotNone(file.creation_date)
+        self.assertIsNotNone(file.change_date)
+        self.assertEqual(file.extension, ".txt")
+        self.assertIsNotNone(file.owner)
+
+    def test_file_is_file(self):
+        path = Path(__file__).parent / "test.txt"
+        file = File(str(path))
+        self.assertTrue(file.is_file())
+
+    def test_file_get_file_extension(self):
+        path = Path(__file__).parent / "test.txt"
+        self.assertEqual(File.get_file_extension(path), ".txt")
 
     def test_file_get_catalog_name(self):
         self.assertEqual(File.get_catalog_name("C:\\test"), "test")
@@ -24,6 +41,9 @@ class TestDiskUsage(unittest.TestCase):
                 mock_lookup_account_sid.return_value = ("owner", None, None)
                 self.assertEqual(File.get_owner("test.txt"), "owner")
 
+    def test_calculating_files_count(self):
+        path = Path(__file__).parent / "root"
+        task = CalculatingFilesCount(path)
     @patch('os.walk')
     def test_calculating_files_count(self, mock_walk):
         task = CalculatingFilesCount("root")
